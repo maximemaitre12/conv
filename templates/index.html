@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Léa</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: #0a0a0a;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 460px;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      background: #111;
+      border-left: 1px solid #1e1e1e;
+      border-right: 1px solid #1e1e1e;
+    }
+
+    /* Header */
+    .header {
+      padding: 14px 18px;
+      background: rgba(17,17,17,0.95);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid #1e1e1e;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-shrink: 0;
+    }
+
+    .avatar-wrap { position: relative; }
+
+    .avatar {
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #f472b6, #a855f7);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 17px;
+      font-weight: 700;
+      color: white;
+      letter-spacing: -0.5px;
+    }
+
+    .online-dot {
+      position: absolute;
+      bottom: 1px;
+      right: 1px;
+      width: 11px;
+      height: 11px;
+      background: #22c55e;
+      border-radius: 50%;
+      border: 2px solid #111;
+    }
+
+    .header-text h2 {
+      font-size: 15px;
+      font-weight: 600;
+      color: #f0f0f0;
+    }
+
+    .header-text p {
+      font-size: 11px;
+      color: #22c55e;
+      margin-top: 1px;
+    }
+
+    /* Messages area */
+    .messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 18px 14px 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      scrollbar-width: thin;
+      scrollbar-color: #222 transparent;
+    }
+
+    .messages::-webkit-scrollbar { width: 3px; }
+    .messages::-webkit-scrollbar-thumb { background: #2a2a2a; border-radius: 2px; }
+
+    .bubble {
+      max-width: 78%;
+      padding: 9px 13px;
+      border-radius: 18px;
+      font-size: 14.5px;
+      line-height: 1.55;
+      word-break: break-word;
+      white-space: pre-wrap;
+      animation: pop 0.18s ease;
+    }
+
+    @keyframes pop {
+      from { opacity: 0; transform: scale(0.96) translateY(4px); }
+      to   { opacity: 1; transform: scale(1) translateY(0); }
+    }
+
+    .bubble.lea {
+      background: #1f1128;
+      color: #ede0f5;
+      border-bottom-left-radius: 4px;
+      align-self: flex-start;
+    }
+
+    .bubble.user {
+      background: #1a3554;
+      color: #ddeeff;
+      border-bottom-right-radius: 4px;
+      align-self: flex-end;
+    }
+
+    /* Typing */
+    .typing {
+      display: none;
+      align-self: flex-start;
+      background: #1f1128;
+      padding: 11px 14px;
+      border-radius: 18px;
+      border-bottom-left-radius: 4px;
+      gap: 5px;
+      align-items: center;
+    }
+    .typing.show { display: flex; }
+
+    .dot {
+      width: 7px;
+      height: 7px;
+      background: #a855f7;
+      border-radius: 50%;
+      animation: bounce 1.3s infinite;
+    }
+    .dot:nth-child(2) { animation-delay: 0.15s; }
+    .dot:nth-child(3) { animation-delay: 0.3s; }
+
+    @keyframes bounce {
+      0%, 60%, 100% { transform: translateY(0); opacity: 0.35; }
+      30% { transform: translateY(-6px); opacity: 1; }
+    }
+
+    /* Input */
+    .input-area {
+      padding: 10px 12px;
+      background: rgba(17,17,17,0.98);
+      border-top: 1px solid #1e1e1e;
+      display: flex;
+      align-items: flex-end;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+
+    textarea {
+      flex: 1;
+      background: #1c1c1c;
+      border: 1px solid #2a2a2a;
+      border-radius: 20px;
+      padding: 9px 14px;
+      color: #f0f0f0;
+      font-size: 14.5px;
+      font-family: inherit;
+      resize: none;
+      outline: none;
+      max-height: 110px;
+      line-height: 1.5;
+      transition: border-color 0.15s;
+    }
+
+    textarea:focus { border-color: #a855f7; }
+    textarea::placeholder { color: #444; }
+
+    .send {
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #f472b6, #a855f7);
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      transition: transform 0.1s, opacity 0.15s;
+    }
+
+    .send:hover { transform: scale(1.06); }
+    .send:active { transform: scale(0.94); }
+    .send:disabled { opacity: 0.4; cursor: default; transform: none; }
+
+    .send svg { width: 16px; height: 16px; fill: white; margin-left: 2px; }
+
+    /* Date separator */
+    .date-sep {
+      text-align: center;
+      font-size: 11px;
+      color: #444;
+      margin: 6px 0;
+      user-select: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+
+    <div class="header">
+      <div class="avatar-wrap">
+        <div class="avatar">L</div>
+        <div class="online-dot"></div>
+      </div>
+      <div class="header-text">
+        <h2>Léa</h2>
+        <p>● en ligne</p>
+      </div>
+    </div>
+
+    <div class="messages" id="messages">
+      <div class="date-sep">Aujourd'hui</div>
+    </div>
+
+    <div class="typing" id="typing">
+      <div class="dot"></div>
+      <div class="dot"></div>
+      <div class="dot"></div>
+    </div>
+
+    <div class="input-area">
+      <textarea id="input" placeholder="Message..." rows="1"></textarea>
+      <button class="send" id="sendBtn" onclick="send()">
+        <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+      </button>
+    </div>
+
+  </div>
+
+  <script>
+    let history = [];
+    let busy = false;
+
+    const messagesEl = document.getElementById('messages');
+    const typingEl   = document.getElementById('typing');
+    const inputEl    = document.getElementById('input');
+    const sendBtn    = document.getElementById('sendBtn');
+
+    // Auto-resize textarea
+    inputEl.addEventListener('input', () => {
+      inputEl.style.height = 'auto';
+      inputEl.style.height = Math.min(inputEl.scrollHeight, 110) + 'px';
+    });
+
+    inputEl.addEventListener('keydown', e => {
+      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); }
+    });
+
+    function addBubble(text, who) {
+      const el = document.createElement('div');
+      el.className = `bubble ${who}`;
+      el.textContent = text;
+      messagesEl.appendChild(el);
+      scroll();
+    }
+
+    function showTyping() {
+      messagesEl.appendChild(typingEl);
+      typingEl.classList.add('show');
+      scroll();
+    }
+
+    function hideTyping() {
+      typingEl.classList.remove('show');
+    }
+
+    function scroll() {
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+    }
+
+    function setLocked(v) {
+      busy = v;
+      sendBtn.disabled = v;
+      inputEl.disabled = v;
+    }
+
+    // Typing delay: simulates reading + typing time
+    function typingDelay(text) {
+      const words = text.split(' ').length;
+      return Math.min(Math.max(words * 120, 900), 3500);
+    }
+
+    async function send() {
+      if (busy) return;
+      const text = inputEl.value.trim();
+      if (!text) return;
+
+      inputEl.value = '';
+      inputEl.style.height = 'auto';
+      addBubble(text, 'user');
+      await leaRespond(text);
+    }
+
+    async function leaRespond(userMessage, isGreeting = false) {
+      setLocked(true);
+      setTimeout(showTyping, 350);
+
+      try {
+        const body = isGreeting
+          ? { greeting: true, history: [] }
+          : { message: userMessage, history };
+
+        const res  = await fetch('/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body)
+        });
+
+        const data = await res.json();
+        history = data.history;
+
+        const delay = typingDelay(data.response);
+        setTimeout(() => {
+          hideTyping();
+          addBubble(data.response, 'lea');
+          setLocked(false);
+          inputEl.focus();
+        }, delay);
+
+      } catch (err) {
+        console.error(err);
+        hideTyping();
+        setLocked(false);
+      }
+    }
+
+    // User opens the conversation
+  </script>
+</body>
+</html>

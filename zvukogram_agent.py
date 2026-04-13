@@ -1,0 +1,303 @@
+"""
+ZvukoGram Voice Agent — sélectionne et fournit des vocaux pour Eva.
+
+Priorité :
+  1. Fichiers téléchargés depuis zvukogram.com  (voice_catalog.json)
+  2. Synthèse TTS via API zvukogram.com          (si token disponible)
+  3. None                                         (Eva envoie du texte)
+
+Usage standalone :
+    python zvukogram_agent.py --list-voices      # voix TTS disponibles
+    python zvukogram_agent.py --test "как дела"  # génère un vocal TTS test
+    python zvukogram_agent.py --pick "занята"    # cherche dans le catalogue
+"""
+
+import asyncio
+import hashlib
+import json
+import os
+import re
+import argparse
+from io import BytesIO
+from pathlib import Path
+from datetime import datetime
+from difflib import SequenceMatcher
+
+from dotenv import load_dotenv
+
+load_dotenv()
+
+ZVUKOGRAM_TOKEN = os.getenv("ZVUKOGRAM_TOKEN", "")
+ZVUKOGRAM_EMAIL = os.getenv("ZVUKOGRAM_EMAIL", "")
+DEFAULT_VOICE   = os.getenv("ZVUKOGRAM_VOICE", "Alena")
+
+CATALOG_PATH = Path("voice_catalog.json")
+TTS_CACHE    = Path("voice_cache")
+TTS_CACHE.mkdir(exist_ok=True)
+
+# ─── Logs ─────────────────────────────────────────────────────
+
+def ts():
+    return datetime.now().strftime("%H:%M:%S")
+
+def log(tag, msg, extra=""):
+    line = f"[{ts()}] [{tag}] {msg}"
+    if extra:
+        line += f"  |  {extra}"
+    print(line, flush=True)
+
+# ─── Catalogue (fichiers téléchargés) ────────────────────────
+
+_catalog: list[dict] | None = None
+
+def _load_catalog() -> list[dict]:
+    global _catalog
+    if _catalog is not None:
+        return _catalog
+    if not CATALOG_PATH.exists():
+        _catalog = []
+        return _catalog
+    _catalog = json.loads(CATALOG_PATH.read_text(encoding="utf-8"))
+    # Filtre les entrées dont le fichier n'existe plus
+    _catalog = [e for e in _catalog if Path(e["file"]).exists()]
+    log("CAT", f"Catalogue chargé : {len(_catalog)} vocaux")
+    return _catalog
+
+
+def _similarity(a: str, b: str) -> float:
+    return SequenceMatcher(None, a.lower(), b.lower()).ratio()
+
+
+def pick_voice_for(text: str) -> dict | None:
+    """
+    Cherche dans le catalogue le vocal dont le transcript est le plus proche
+    du texte donné.  Retourne l'entrée catalogue ou None.
+    """
+    catalog = _load_catalog()
+    if not catalog:
+        return None
+
+    text_lower = text.lower()
+    best_score  = 0.0
+    best_entry  = None
+
+    for entry in catalog:
+        transcript = entry.get("transcript", "").lower()
+        tags       = entry.get("tags", [])
+
+        score = _similarity(text_lower, transcript)
+
+        # Boost si un mot-clé du texte est dans le transcript
+        for word in re.findall(r'\w+', text_lower):
+            if len(word) > 3 and word in transcript:
+                score += 0.25
+
+        # Boost si les tags correspondent aux mots du texte
+        for tag in tags:
+            if tag in text_lower:
+                score += 0.15
+
+        if score > best_score:
+            best_score = score
+            best_entry = entry
+
+    # Seuil minimum — évite d'envoyer un vocal complètement hors sujet
+    if best_score < 0.15:
+        return None
+
+    log("VOX", f"Pick catalogue (score={best_score:.2f})", best_entry.get("transcript", ""))
+    return best_entry
+
+
+def pick_random_voice(tags: list[str] | None = None) -> dict | None:
+    """Retourne un vocal aléatoire depuis le catalogue, filtré par tags optionnels."""
+    import random
+    catalog = _load_catalog()
+    if not catalog:
+        return None
+
+    if tags:
+        pool = [e for e in catalog if any(t in e.get("tags", []) for t in tags)]
+        if not pool:
+            pool = catalog
+    else:
+        pool = catalog
+
+    choice = random.choice(pool)
+    log("VOX", f"Pick aléatoire", choice.get("transcript", ""))
+    return choice
+
+
+# ─── TTS API (fallback) ───────────────────────────────────────
+
+class VoiceAgent:
+    """
+    Agent TTS — utilise l'API zvukogram.com pour synthétiser des vocaux.
+    Utilisé uniquement si le catalogue ne contient pas de match satisfaisant.
+    """
+
+    def __init__(self):
+        self._api = None
+        self.voice = DEFAULT_VOICE
+        self._tts_available = bool(ZVUKOGRAM_TOKEN and ZVUKOGRAM_EMAIL)
+        if not self._tts_available:
+            log("WRN", "TTS désactivé (ZVUKOGRAM_TOKEN/EMAIL manquants)")
+
+    def _get_api(self):
+        if not self._tts_available:
+            return None
+        if self._api is None:
+            from zvukogram import ZvukoGram
+            self._api = ZvukoGram(ZVUKOGRAM_TOKEN, ZVUKOGRAM_EMAIL)
+        return self._api
+
+    async def close(self):
+        if self._api:
+            await self._api.session.close()
+            self._api = None
+
+    def _cache_path(self, text: str) -> Path:
+        key = hashlib.md5(f"{self.voice}:{text}".encode()).hexdigest()
+        return TTS_CACHE / f"{key}.mp3"
+
+    async def generate_tts(self, text: str) -> BytesIO | None:
+        """Synthétise `text` via TTS. Retourne BytesIO ou None."""
+        if not self._tts_available:
+            return None
+
+        cached = self._cache_path(text)
+        if cached.exists():
+            log("TTS", "Cache hit", text[:40])
+            buf = BytesIO(cached.read_bytes())
+            buf.name = "voice.mp3"
+            return buf
+
+        log("TTS", f"Génération", f"voice={self.voice} text={text[:60]}")
+        api = self._get_api()
+        try:
+            from zvukogram import ZvukoGramError
+            if len(text) <= 300:
+                audio = await api.tts(voice=self.voice, text=text, format="mp3", speed=0.95)
+            else:
+                audio = await api.tts_long(voice=self.voice, text=text, format="mp3", speed=0.95)
+                for _ in range(30):
+                    await asyncio.sleep(1)
+                    audio = await api.check_progress(audio.id)
+                    if audio.status == 1 and audio.file:
+                        break
+
+            if not audio.file:
+                log("ERR", "Aucun fichier retourné par l'API TTS")
+                return None
+
+            buf = await audio.download()
+            if not isinstance(buf, BytesIO):
+                return None
+
+            cached.write_bytes(buf.getvalue())
+            buf.seek(0)
+            buf.name = "voice.mp3"
+            log("TTS", f"Vocal généré ({len(buf.getvalue())} bytes)", f"solde={audio.balance}")
+            return buf
+
+        except Exception as e:
+            log("ERR", f"TTS échoué : {e}")
+            return None
+
+    async def generate(self, text: str) -> tuple[BytesIO | None, str | None]:
+        """
+        Point d'entrée principal.
+        Essaie d'abord le catalogue, puis la TTS.
+        Retourne (BytesIO, transcript_utilisé) ou (None, None).
+        """
+        # 1. Catalogue
+        entry = pick_voice_for(text)
+        if entry:
+            path = Path(entry["file"])
+            if path.exists():
+                buf = BytesIO(path.read_bytes())
+                buf.name = "voice.mp3"
+                return buf, entry["transcript"]
+
+        # 2. TTS
+        buf = await self.generate_tts(text)
+        if buf:
+            return buf, text
+
+        return None, None
+
+    async def list_voices(self, lang_filter: str = "Русский") -> list:
+        api = self._get_api()
+        if not api:
+            return []
+        all_voices = await api.get_voices()
+        result = []
+        for lang, voices in all_voices.items():
+            if lang_filter.lower() in lang.lower():
+                for v in voices:
+                    result.append({"voice": v.voice, "sex": v.sex, "price": v.price, "pro": v.pro})
+        return result
+
+
+# ─── Singleton partagé avec telegram_bot.py ───────────────────
+
+_agent: VoiceAgent | None = None
+
+def get_voice_agent() -> VoiceAgent:
+    global _agent
+    if _agent is None:
+        _agent = VoiceAgent()
+    return _agent
+
+
+# ─── CLI standalone ───────────────────────────────────────────
+
+async def cli_main():
+    parser = argparse.ArgumentParser(description="ZvukoGram Voice Agent pour Eva")
+    parser.add_argument("--list-voices", action="store_true", help="Lister les voix TTS russes")
+    parser.add_argument("--test",  metavar="TEXT",  help="Générer un vocal TTS test")
+    parser.add_argument("--pick",  metavar="TEXT",  help="Chercher dans le catalogue")
+    parser.add_argument("--voice", default=DEFAULT_VOICE)
+    args = parser.parse_args()
+
+    agent = VoiceAgent()
+    agent.voice = args.voice
+
+    try:
+        if args.list_voices:
+            voices = await agent.list_voices()
+            if not voices:
+                print("TTS non configuré (ZVUKOGRAM_TOKEN manquant) ou aucune voix trouvée.")
+            else:
+                print(f"\n{'Voix':<25} {'Sexe':<10} {'Prix':<8} Pro")
+                print("-" * 50)
+                for v in voices:
+                    print(f"{v['voice']:<25} {v['sex']:<10} {v['price']:<8} {'✓' if v['pro'] else ''}")
+
+        elif args.pick:
+            entry = pick_voice_for(args.pick)
+            if entry:
+                print(f"\nMeilleur match pour \"{args.pick}\":")
+                print(f"  → {entry['transcript']}")
+                print(f"     Tags   : {', '.join(entry['tags'])}")
+                print(f"     Fichier: {entry['file']}")
+            else:
+                print(f"Aucun match dans le catalogue pour \"{args.pick}\"")
+
+        elif args.test:
+            buf, transcript = await agent.generate(args.test)
+            if buf:
+                out = Path("test_voice.mp3")
+                out.write_bytes(buf.read())
+                print(f"\nVocal sauvegardé : {out.resolve()}")
+                print(f"Transcript utilisé : {transcript}")
+            else:
+                print("Échec de génération.")
+        else:
+            parser.print_help()
+    finally:
+        await agent.close()
+
+
+if __name__ == "__main__":
+    asyncio.run(cli_main())

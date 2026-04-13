@@ -3,3 +3,5 @@ openai>=1.50.0
 python-dotenv>=1.0.0
 playwright>=1.40.0
 telethon>=1.36.0
+zvukogram>=1.0.1
+httpx>=0.27.0

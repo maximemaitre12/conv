@@ -1,862 +1,1064 @@
 [
   {
     "id": "43127",
-    "file": "voices\\privetikr.mp3",
-    "filename": "privetikr.mp3",
-    "transcript": "приветик(р)",
-    "tts_text": "приветик",
+    "track": "/mp3/44/hellop.mp3",
+    "title": "приветик(р)",
+    "filename": "hellop.mp3",
     "category": "female_pack",
     "tags": [
       "greeting",
       "casual"
-    ]
+    ],
+    "transcript": "приветик(р)",
+    "file": "voices/hellop.mp3"
   },
   {
     "id": "43101",
-    "file": "voices\\kak-dela.mp3",
-    "filename": "kak-dela.mp3",
-    "transcript": "как дела",
-    "tts_text": "как дела",
+    "track": "/mp3/44/how-are-you.mp3",
+    "title": "как дела",
+    "filename": "how-are-you.mp3",
     "category": "female_pack",
     "tags": [
       "question",
       "casual"
-    ]
-  },
-  {
-    "id": "43104",
-    "file": "voices\\kak-tebe-moya-popa.mp3",
-    "filename": "kak-tebe-moya-popa.mp3",
-    "transcript": "как тебе моя попа",
-    "tts_text": "как тебе моя попа",
-    "category": "female_pack",
-    "tags": [
-      "flirt",
-      "casual"
-    ]
+    ],
+    "transcript": "как дела",
+    "file": "voices/how-are-you.mp3"
   },
   {
     "id": "43128",
-    "file": "voices\\prosti-chto-dolgo-ne-otvechala.mp3",
-    "filename": "prosti-chto-dolgo-ne-otvechala.mp3",
-    "transcript": "прости, что долго не отвечала",
-    "tts_text": "прости, что долго не отвечала",
+    "track": "/mp3/44/sorry-for-a-delayed-response.mp3",
+    "title": "прости, что долго не отвечала",
+    "filename": "sorry-for-a-delayed-response.mp3",
     "category": "female_pack",
     "tags": [
-      "busy",
       "casual"
-    ]
+    ],
+    "transcript": "прости, что долго не отвечала",
+    "file": "voices/sorry-for-a-delayed-response.mp3"
+  },
+  {
+    "id": "43104",
+    "track": "/mp3/44/how-do-you-like-my-butt.mp3",
+    "title": "как тебе моя попа",
+    "filename": "how-do-you-like-my-butt.mp3",
+    "category": "female_pack",
+    "tags": [
+      "flirt",
+      "casual"
+    ],
+    "transcript": "как тебе моя попа",
+    "file": "voices/how-do-you-like-my-butt.mp3"
   },
   {
     "id": "43141",
-    "file": "voices\\che-delaesh.mp3",
-    "filename": "che-delaesh.mp3",
-    "transcript": "Че делаешь",
-    "tts_text": "Че делаешь",
-    "category": "female_voices",
+    "track": "/mp3/44/what-are-you-doing.mp3",
+    "title": "Че делаешь",
+    "filename": "what-are-you-doing.mp3",
+    "category": "female_pack",
     "tags": [
+      "question",
       "casual"
-    ]
+    ],
+    "transcript": "Че делаешь",
+    "file": "voices/what-are-you-doing.mp3"
   },
   {
     "id": "43138",
-    "file": "voices\\horosho-r.mp3",
-    "filename": "horosho-r.mp3",
-    "transcript": "Хорошо (р)",
-    "tts_text": "Хорошо",
+    "track": "/mp3/44/good-r.mp3",
+    "title": "Хорошо (р)",
+    "filename": "good-r.mp3",
     "category": "female_pack",
     "tags": [
       "confirm",
       "casual"
-    ]
-  },
-  {
-    "id": "43139",
-    "file": "voices\\hochesh-menya.mp3",
-    "filename": "hochesh-menya.mp3",
-    "transcript": "хочешь меня",
-    "tts_text": "хочешь меня",
-    "category": "female_pack",
-    "tags": [
-      "flirt",
-      "casual"
-    ]
+    ],
+    "transcript": "Хорошо (р)",
+    "file": "voices/good-r.mp3"
   },
   {
     "id": "43129",
-    "file": "voices\\prostinemnogo-zanyata-pozje-napishu.mp3",
-    "filename": "prostinemnogo-zanyata-pozje-napishu.mp3",
-    "transcript": "прости,немного занята позже напишу",
-    "tts_text": "прости,немного занята позже напишу",
+    "track": "/mp3/44/sorry-i39m-a-little-busy-i39ll-write-later.mp3",
+    "title": "прости,немного занята позже напишу",
+    "filename": "sorry-i39m-a-little-busy-i39ll-write-later.mp3",
     "category": "female_pack",
     "tags": [
       "busy",
       "casual"
-    ]
+    ],
+    "transcript": "прости,немного занята позже напишу",
+    "file": "voices/sorry-i39m-a-little-busy-i39ll-write-later.mp3"
+  },
+  {
+    "id": "43139",
+    "track": "/mp3/44/you-want-me.mp3",
+    "title": "хочешь меня",
+    "filename": "you-want-me.mp3",
+    "category": "female_pack",
+    "tags": [
+      "flirt",
+      "casual"
+    ],
+    "transcript": "хочешь меня",
+    "file": "voices/you-want-me.mp3"
   },
   {
     "id": "43146",
-    "file": "voices\\ya-tebya-lyublyu.mp3",
-    "filename": "ya-tebya-lyublyu.mp3",
-    "transcript": "я тебя люблю",
-    "tts_text": "я тебя люблю",
+    "track": "/mp3/44/i-love-you.mp3",
+    "title": "я тебя люблю",
+    "filename": "i-love-you.mp3",
     "category": "female_pack",
     "tags": [
       "flirt",
       "casual"
-    ]
+    ],
+    "transcript": "я тебя люблю",
+    "file": "voices/i-love-you.mp3"
   },
   {
     "id": "43147",
-    "file": "voices\\ya-ustala--rasskazyivaetchto-delala-.mp3",
-    "filename": "ya-ustala--rasskazyivaetchto-delala-.mp3",
-    "transcript": "я устала ( рассказывает,что делала )",
-    "tts_text": "я устала",
+    "track": "/mp3/44/i39m-tired-tells-what-i-did.mp3",
+    "title": "я устала ( рассказывает,что делала )",
+    "filename": "i39m-tired-tells-what-i-did.mp3",
     "category": "female_pack",
     "tags": [
       "busy",
       "casual"
-    ]
-  },
-  {
-    "id": "43110",
-    "file": "voices\\mojet-fotochku-skinesh-ya-hochu-ego-uvidet.mp3",
-    "filename": "mojet-fotochku-skinesh-ya-hochu-ego-uvidet.mp3",
-    "transcript": "может фоточку скинешь, я хочу его увидеть",
-    "tts_text": "может фоточку скинешь, я хочу его увидеть",
-    "category": "female_pack",
-    "tags": [
-      "question",
-      "casual"
-    ]
-  },
-  {
-    "id": "43133",
-    "file": "voices\\spokoynoy-nochi.mp3",
-    "filename": "spokoynoy-nochi.mp3",
-    "transcript": "спокойной ночи",
-    "tts_text": "спокойной ночи",
-    "category": "female_pack",
-    "tags": [
-      "bye",
-      "casual"
-    ]
+    ],
+    "transcript": "я устала ( рассказывает,что делала )",
+    "file": "voices/i39m-tired-tells-what-i-did.mp3"
   },
   {
     "id": "43111",
-    "file": "voices\\ne-ponyala.mp3",
-    "filename": "ne-ponyala.mp3",
-    "transcript": "не поняла",
-    "tts_text": "не поняла",
+    "track": "/mp3/44/didn39t-understand.mp3",
+    "title": "не поняла",
+    "filename": "didn39t-understand.mp3",
     "category": "female_pack",
     "tags": [
-      "deny",
       "casual"
-    ]
+    ],
+    "transcript": "не поняла",
+    "file": "voices/didn39t-understand.mp3"
+  },
+  {
+    "id": "43110",
+    "track": "/mp3/44/can-you-post-a-picture-i-would-like-to-see-it.mp3",
+    "title": "может фоточку скинешь, я хочу его увидеть",
+    "filename": "can-you-post-a-picture-i-would-like-to-see-it.mp3",
+    "category": "female_pack",
+    "tags": [
+      "question",
+      "casual"
+    ],
+    "transcript": "может фоточку скинешь, я хочу его увидеть",
+    "file": "voices/can-you-post-a-picture-i-would-like-to-see-it.mp3"
+  },
+  {
+    "id": "43133",
+    "track": "/mp3/44/good-night.mp3",
+    "title": "спокойной ночи",
+    "filename": "good-night.mp3",
+    "category": "female_pack",
+    "tags": [
+      "bye",
+      "confirm",
+      "casual"
+    ],
+    "transcript": "спокойной ночи",
+    "file": "voices/good-night.mp3"
   },
   {
     "id": "43144",
-    "file": "voices\\ya-obidelas.mp3",
-    "filename": "ya-obidelas.mp3",
-    "transcript": "я обиделась",
-    "tts_text": "я обиделась",
+    "track": "/mp3/44/i39m-offended.mp3",
+    "title": "я обиделась",
+    "filename": "i39m-offended.mp3",
     "category": "female_pack",
     "tags": [
       "reaction",
       "casual"
-    ]
+    ],
+    "transcript": "я обиделась",
+    "file": "voices/i39m-offended.mp3"
   },
   {
     "id": "43109",
-    "file": "voices\\mojet-poshalim.mp3",
-    "filename": "mojet-poshalim.mp3",
-    "transcript": "может пошалим",
-    "tts_text": "может пошалим",
+    "track": "/mp3/44/maybe-we39ll-fool-around.mp3",
+    "title": "может пошалим",
+    "filename": "maybe-we39ll-fool-around.mp3",
     "category": "female_pack",
     "tags": [
       "flirt",
       "casual"
-    ]
+    ],
+    "transcript": "может пошалим",
+    "file": "voices/maybe-we39ll-fool-around.mp3"
   },
   {
     "id": "43148",
-    "file": "voices\\yasno.mp3",
-    "filename": "yasno.mp3",
-    "transcript": "ясно",
-    "tts_text": "ясно",
+    "track": "/mp3/44/clear.mp3",
+    "title": "ясно",
+    "filename": "clear.mp3",
     "category": "female_pack",
     "tags": [
       "confirm",
       "casual"
-    ]
-  },
-  {
-    "id": "43106",
-    "file": "voices\\mmkakoy-bolshoy-hochu-tebya.mp3",
-    "filename": "mmkakoy-bolshoy-hochu-tebya.mp3",
-    "transcript": "мм,какой большой хочу тебя",
-    "tts_text": "мм,какой большой хочу тебя",
-    "category": "female_pack",
-    "tags": [
-      "flirt",
-      "casual"
-    ]
+    ],
+    "transcript": "ясно",
+    "file": "voices/clear.mp3"
   },
   {
     "id": "43092",
-    "file": "voices\\da-r.mp3",
-    "filename": "da-r.mp3",
-    "transcript": "Да (р)",
-    "tts_text": "Да",
+    "track": "/mp3/44/yes-r.mp3",
+    "title": "Да (р)",
+    "filename": "yes-r.mp3",
     "category": "female_pack",
     "tags": [
       "confirm",
       "casual"
-    ]
-  },
-  {
-    "id": "43140",
-    "file": "voices\\chmoki-chsmoki.mp3",
-    "filename": "chmoki-chsmoki.mp3",
-    "transcript": "чмоки-чсмоки",
-    "tts_text": "чмоки-чсмоки",
-    "category": "female_pack",
-    "tags": [
-      "flirt",
-      "casual"
-    ]
+    ],
+    "transcript": "Да (р)",
+    "file": "voices/yes-r.mp3"
   },
   {
     "id": "43086",
-    "file": "voices\\blink-sojaleniyu-ne-mogu.mp3",
-    "filename": "blink-sojaleniyu-ne-mogu.mp3",
-    "transcript": "блин,к сожалению не могу",
-    "tts_text": "блин,к сожалению не могу",
+    "track": "/mp3/44/damn-sorry-i-can39t.mp3",
+    "title": "блин,к сожалению не могу",
+    "filename": "damn-sorry-i-can39t.mp3",
     "category": "female_pack",
     "tags": [
-      "deny",
       "reaction",
       "casual"
-    ]
+    ],
+    "transcript": "блин,к сожалению не могу",
+    "file": "voices/damn-sorry-i-can39t.mp3"
   },
   {
     "id": "43114",
-    "file": "voices\\net-r.mp3",
-    "filename": "net-r.mp3",
-    "transcript": "нет (р)",
-    "tts_text": "нет",
+    "track": "/mp3/44/no-p.mp3",
+    "title": "нет (р)",
+    "filename": "no-p.mp3",
     "category": "female_pack",
     "tags": [
       "deny",
       "casual"
-    ]
+    ],
+    "transcript": "нет (р)",
+    "file": "voices/no-p.mp3"
   },
   {
-    "id": "43134",
-    "file": "voices\\tyi-mne-nravishsya.mp3",
-    "filename": "tyi-mne-nravishsya.mp3",
-    "transcript": "ты мне нравишься",
-    "tts_text": "ты мне нравишься",
+    "id": "43140",
+    "track": "/mp3/44/smack-smack.mp3",
+    "title": "чмоки-чсмоки",
+    "filename": "smack-smack.mp3",
     "category": "female_pack",
     "tags": [
       "flirt",
       "casual"
-    ]
+    ],
+    "transcript": "чмоки-чсмоки",
+    "file": "voices/smack-smack.mp3"
   },
   {
     "id": "43135",
-    "file": "voices\\film-smotryu--rasska-syujeta-.mp3",
-    "filename": "film-smotryu--rasska-syujeta-.mp3",
-    "transcript": "фильм смотрю ( расска сюжета )",
-    "tts_text": "фильм смотрю",
+    "track": "/mp3/44/i39m-watching-a-movie-plot-story.mp3",
+    "title": "фильм смотрю ( расска сюжета )",
+    "filename": "i39m-watching-a-movie-plot-story.mp3",
     "category": "female_pack",
     "tags": [
       "busy",
       "casual"
-    ]
+    ],
+    "transcript": "фильм смотрю ( расска сюжета )",
+    "file": "voices/i39m-watching-a-movie-plot-story.mp3"
+  },
+  {
+    "id": "43106",
+    "track": "/mp3/44/mm-how-big-i-want-you.mp3",
+    "title": "мм,какой большой хочу тебя",
+    "filename": "mm-how-big-i-want-you.mp3",
+    "category": "female_pack",
+    "tags": [
+      "flirt",
+      "casual"
+    ],
+    "transcript": "мм,какой большой хочу тебя",
+    "file": "voices/mm-how-big-i-want-you.mp3"
+  },
+  {
+    "id": "43134",
+    "track": "/mp3/44/i-like-you.mp3",
+    "title": "ты мне нравишься",
+    "filename": "i-like-you.mp3",
+    "category": "female_pack",
+    "tags": [
+      "flirt",
+      "reaction",
+      "casual"
+    ],
+    "transcript": "ты мне нравишься",
+    "file": "voices/i-like-you.mp3"
   },
   {
     "id": "43093",
-    "file": "voices\\davaybudu-jdat.mp3",
-    "filename": "davaybudu-jdat.mp3",
-    "transcript": "Давай,буду ждать",
-    "tts_text": "Давай,буду ждать",
+    "track": "/mp3/44/come-on-i39ll-be-waiting.mp3",
+    "title": "Давай,буду ждать",
+    "filename": "come-on-i39ll-be-waiting.mp3",
     "category": "female_pack",
     "tags": [
       "confirm",
       "casual"
-    ]
-  },
-  {
-    "id": "43102",
-    "file": "voices\\kak-dumaesh-chto-seychas-na-mne.mp3",
-    "filename": "kak-dumaesh-chto-seychas-na-mne.mp3",
-    "transcript": "как думаешь что сейчас на мне",
-    "tts_text": "как думаешь что сейчас на мне",
-    "category": "female_pack",
-    "tags": [
-      "question",
-      "casual"
-    ]
-  },
-  {
-    "id": "43097",
-    "file": "voices\\dobroe-utro.mp3",
-    "filename": "dobroe-utro.mp3",
-    "transcript": "доброе утро",
-    "tts_text": "доброе утро",
-    "category": "female_pack",
-    "tags": [
-      "greeting",
-      "casual"
-    ]
+    ],
+    "transcript": "Давай,буду ждать",
+    "file": "voices/come-on-i39ll-be-waiting.mp3"
   },
   {
     "id": "43117",
-    "file": "voices\\oyvse.mp3",
-    "filename": "oyvse.mp3",
-    "transcript": "ой,все",
-    "tts_text": "ой,все",
+    "track": "/mp3/44/oh-everything.mp3",
+    "title": "ой,все",
+    "filename": "oh-everything.mp3",
     "category": "female_pack",
     "tags": [
       "reaction",
       "casual"
-    ]
+    ],
+    "transcript": "ой,все",
+    "file": "voices/oh-everything.mp3"
+  },
+  {
+    "id": "43102",
+    "track": "/mp3/44/what-do-you-think-is-on-me-now.mp3",
+    "title": "как думаешь что сейчас на мне",
+    "filename": "what-do-you-think-is-on-me-now.mp3",
+    "category": "female_pack",
+    "tags": [
+      "question",
+      "casual"
+    ],
+    "transcript": "как думаешь что сейчас на мне",
+    "file": "voices/what-do-you-think-is-on-me-now.mp3"
+  },
+  {
+    "id": "43097",
+    "track": "/mp3/44/good-morning.mp3",
+    "title": "доброе утро",
+    "filename": "good-morning.mp3",
+    "category": "female_pack",
+    "tags": [
+      "greeting",
+      "confirm",
+      "casual"
+    ],
+    "transcript": "доброе утро",
+    "file": "voices/good-morning.mp3"
   },
   {
     "id": "43121",
-    "file": "voices\\poka-poka.mp3",
-    "filename": "poka-poka.mp3",
-    "transcript": "пока-пока",
-    "tts_text": "пока-пока",
+    "track": "/mp3/44/bye-bye.mp3",
+    "title": "пока-пока",
+    "filename": "bye-bye.mp3",
     "category": "female_pack",
     "tags": [
       "bye",
       "casual"
-    ]
+    ],
+    "transcript": "пока-пока",
+    "file": "voices/bye-bye.mp3"
   },
   {
     "id": "43085",
-    "file": "voices\\a-tyi-menya-lyubish.mp3",
-    "filename": "a-tyi-menya-lyubish.mp3",
-    "transcript": "а ты меня любишь",
-    "tts_text": "а ты меня любишь",
-    "category": "female_pack",
-    "tags": [
-      "casual"
-    ]
-  },
-  {
-    "id": "43084",
-    "file": "voices\\a-grud-nravitsya.mp3",
-    "filename": "a-grud-nravitsya.mp3",
-    "transcript": "а грудь нравится",
-    "tts_text": "а грудь нравится",
+    "track": "/mp3/44/and-do-you-love-me.mp3",
+    "title": "а ты меня любишь",
+    "filename": "and-do-you-love-me.mp3",
     "category": "female_pack",
     "tags": [
       "flirt",
       "casual"
-    ]
+    ],
+    "transcript": "а ты меня любишь",
+    "file": "voices/and-do-you-love-me.mp3"
   },
   {
     "id": "43116",
-    "file": "voices\\obidno-g.mp3",
-    "filename": "obidno-g.mp3",
-    "transcript": "обидно (г)",
-    "tts_text": "обидно",
+    "track": "/mp3/44/shame-d.mp3",
+    "title": "обидно (г)",
+    "filename": "shame-d.mp3",
     "category": "female_pack",
     "tags": [
+      "casual"
+    ],
+    "transcript": "обидно (г)",
+    "file": "voices/shame-d.mp3"
+  },
+  {
+    "id": "43084",
+    "track": "/mp3/44/i-like-breasts.mp3",
+    "title": "а грудь нравится",
+    "filename": "i-like-breasts.mp3",
+    "category": "female_pack",
+    "tags": [
+      "flirt",
       "reaction",
       "casual"
-    ]
+    ],
+    "transcript": "а грудь нравится",
+    "file": "voices/i-like-breasts.mp3"
   },
   {
     "id": "43119",
-    "file": "voices\\podojdi.mp3",
-    "filename": "podojdi.mp3",
+    "track": "/mp3/44/wait.mp3",
+    "title": "подожди",
+    "filename": "wait.mp3",
+    "category": "female_pack",
+    "tags": [
+      "casual"
+    ],
     "transcript": "подожди",
-    "tts_text": "подожди",
-    "category": "female_pack",
-    "tags": [
-      "casual"
-    ]
-  },
-  {
-    "id": "43107",
-    "file": "voices\\mne-ploho--govorit-chto-bolit-idu-spat.mp3",
-    "filename": "mne-ploho--govorit-chto-bolit-idu-spat.mp3",
-    "transcript": "мне плохо ( говорит, что болит) иду спать",
-    "tts_text": "мне плохо  иду спать",
-    "category": "female_pack",
-    "tags": [
-      "busy",
-      "casual"
-    ]
+    "file": "voices/wait.mp3"
   },
   {
     "id": "43145",
-    "file": "voices\\ya-tebe-ne-doveryayu.mp3",
-    "filename": "ya-tebe-ne-doveryayu.mp3",
+    "track": "/mp3/44/i-do-not-trust-you.mp3",
+    "title": "я тебе не доверяю",
+    "filename": "i-do-not-trust-you.mp3",
+    "category": "female_pack",
+    "tags": [
+      "deny",
+      "casual"
+    ],
     "transcript": "я тебе не доверяю",
-    "tts_text": "я тебе не доверяю",
-    "category": "female_pack",
-    "tags": [
-      "deny",
-      "casual"
-    ]
+    "file": "voices/i-do-not-trust-you.mp3"
   },
   {
-    "id": "43100",
-    "file": "voices\\dogovorilis-r.mp3",
-    "filename": "dogovorilis-r.mp3",
-    "transcript": "Договорились (р)",
-    "tts_text": "Договорились",
-    "category": "female_pack",
-    "tags": [
-      "confirm",
-      "casual"
-    ]
-  },
-  {
-    "id": "43126",
-    "file": "voices\\privetik-g.mp3",
-    "filename": "privetik-g.mp3",
-    "transcript": "приветик (г)",
-    "tts_text": "приветик",
-    "category": "female_pack",
-    "tags": [
-      "greeting",
-      "casual"
-    ]
-  },
-  {
-    "id": "43087",
-    "file": "voices\\blinpochemu-ya-tebe-ne-nravlyus.mp3",
-    "filename": "blinpochemu-ya-tebe-ne-nravlyus.mp3",
-    "transcript": "блин,почему. Я тебе не нравлюсь",
-    "tts_text": "блин,почему. Я тебе не нравлюсь",
-    "category": "female_pack",
-    "tags": [
-      "reaction",
-      "casual"
-    ]
-  },
-  {
-    "id": "43132",
-    "file": "voices\\sladkih-snov.mp3",
-    "filename": "sladkih-snov.mp3",
-    "transcript": "сладких снов",
-    "tts_text": "сладких снов",
-    "category": "female_pack",
-    "tags": [
-      "bye",
-      "casual"
-    ]
-  },
-  {
-    "id": "43123",
-    "file": "voices\\posovetuy-film.mp3",
-    "filename": "posovetuy-film.mp3",
-    "transcript": "посоветуй фильм",
-    "tts_text": "посоветуй фильм",
-    "category": "female_pack",
-    "tags": [
-      "question",
-      "casual"
-    ]
-  },
-  {
-    "id": "43115",
-    "file": "voices\\noggti-krashu-a-tyi.mp3",
-    "filename": "noggti-krashu-a-tyi.mp3",
-    "transcript": "ноггти крашу, а ты",
-    "tts_text": "ноггти крашу, а ты",
-    "category": "female_pack",
-    "tags": [
-      "casual"
-    ]
-  },
-  {
-    "id": "43122",
-    "file": "voices\\ponyatno.mp3",
-    "filename": "ponyatno.mp3",
-    "transcript": "понятно",
-    "tts_text": "понятно",
-    "category": "female_pack",
-    "tags": [
-      "confirm",
-      "casual"
-    ]
-  },
-  {
-    "id": "43137",
-    "file": "voices\\horosho-g.mp3",
-    "filename": "horosho-g.mp3",
-    "transcript": "Хорошо (г)",
-    "tts_text": "Хорошо",
-    "category": "female_pack",
-    "tags": [
-      "confirm",
-      "casual"
-    ]
-  },
-  {
-    "id": "43124",
-    "file": "voices\\pochemu-tyi-mne-smayliki-ne-shlesh.mp3",
-    "filename": "pochemu-tyi-mne-smayliki-ne-shlesh.mp3",
-    "transcript": "почему ты мне смайлики не шлешь",
-    "tts_text": "почему ты мне смайлики не шлешь",
-    "category": "female_pack",
-    "tags": [
-      "casual"
-    ]
-  },
-  {
-    "id": "43118",
-    "file": "voices\\ochen-jal.mp3",
-    "filename": "ochen-jal.mp3",
-    "transcript": "Очень жаль",
-    "tts_text": "Очень жаль",
-    "category": "female_pack",
-    "tags": [
-      "reaction",
-      "casual"
-    ]
-  },
-  {
-    "id": "43112",
-    "file": "voices\\ne-ugadal.mp3",
-    "filename": "ne-ugadal.mp3",
-    "transcript": "не угадал",
-    "tts_text": "не угадал",
-    "category": "female_pack",
-    "tags": [
-      "deny",
-      "casual"
-    ]
-  },
-  {
-    "id": "43098",
-    "file": "voices\\dobryiy-vecher.mp3",
-    "filename": "dobryiy-vecher.mp3",
-    "transcript": "добрый вечер",
-    "tts_text": "добрый вечер",
-    "category": "female_pack",
-    "tags": [
-      "greeting",
-      "casual"
-    ]
-  },
-  {
-    "id": "43103",
-    "file": "voices\\kak-skinesh-obyazatelno-otpishi.mp3",
-    "filename": "kak-skinesh-obyazatelno-otpishi.mp3",
-    "transcript": "как скинешь, обязательно отпиши",
-    "tts_text": "как скинешь, обязательно отпиши",
-    "category": "female_pack",
-    "tags": [
-      "casual"
-    ]
-  },
-  {
-    "id": "43089",
-    "file": "voices\\v-chem-tyi-seychas-odet.mp3",
-    "filename": "v-chem-tyi-seychas-odet.mp3",
-    "transcript": "в чем ты сейчас одет",
-    "tts_text": "в чем ты сейчас одет",
-    "category": "female_pack",
-    "tags": [
-      "casual"
-    ]
-  },
-  {
-    "id": "43095",
-    "file": "voices\\do-zavtra.mp3",
-    "filename": "do-zavtra.mp3",
-    "transcript": "до завтра",
-    "tts_text": "до завтра",
-    "category": "female_pack",
-    "tags": [
-      "bye",
-      "casual"
-    ]
-  },
-  {
-    "id": "43088",
-    "file": "voices\\budu-jdat-g.mp3",
-    "filename": "budu-jdat-g.mp3",
-    "transcript": "буду ждать (г)",
-    "tts_text": "буду ждать",
-    "category": "female_pack",
-    "tags": [
-      "confirm",
-      "casual"
-    ]
-  },
-  {
-    "id": "43090",
-    "file": "voices\\gulyat-sobirayus-a-tyi.mp3",
-    "filename": "gulyat-sobirayus-a-tyi.mp3",
-    "transcript": "гулять собираюсь, а ты",
-    "tts_text": "гулять собираюсь, а ты",
+    "id": "43107",
+    "track": "/mp3/44/i-feel-bad-says-it-hurts-i39m-going-to-sleep.mp3",
+    "title": "мне плохо ( говорит, что болит) иду спать",
+    "filename": "i-feel-bad-says-it-hurts-i39m-going-to-sleep.mp3",
     "category": "female_pack",
     "tags": [
       "busy",
       "casual"
-    ]
+    ],
+    "transcript": "мне плохо ( говорит, что болит) иду спать",
+    "file": "voices/i-feel-bad-says-it-hurts-i39m-going-to-sleep.mp3"
   },
   {
-    "id": "43091",
-    "file": "voices\\da-g.mp3",
-    "filename": "da-g.mp3",
-    "transcript": "Да (г)",
-    "tts_text": "Да",
-    "category": "female_pack",
-    "tags": [
-      "confirm",
-      "casual"
-    ]
-  },
-  {
-    "id": "43094",
-    "file": "voices\\dlya-menya-chto-to-novoe.mp3",
-    "filename": "dlya-menya-chto-to-novoe.mp3",
-    "transcript": "для меня что-то новое",
-    "tts_text": "для меня что-то новое",
-    "category": "female_pack",
-    "tags": [
-      "reaction",
-      "casual"
-    ]
-  },
-  {
-    "id": "43142",
-    "file": "voices\\chto-mne-nadet-pomojesh.mp3",
-    "filename": "chto-mne-nadet-pomojesh.mp3",
-    "transcript": "что мне надеть. поможешь",
-    "tts_text": "что мне надеть. поможешь",
-    "category": "female_pack",
-    "tags": [
-      "question",
-      "casual"
-    ]
-  },
-  {
-    "id": "43096",
-    "file": "voices\\dobrogo-vremeni-sutok.mp3",
-    "filename": "dobrogo-vremeni-sutok.mp3",
-    "transcript": "доброго времени суток",
-    "tts_text": "доброго времени суток",
+    "id": "43126",
+    "track": "/mp3/44/hello-g.mp3",
+    "title": "приветик (г)",
+    "filename": "hello-g.mp3",
     "category": "female_pack",
     "tags": [
       "greeting",
       "casual"
-    ]
+    ],
+    "transcript": "приветик (г)",
+    "file": "voices/hello-g.mp3"
+  },
+  {
+    "id": "43132",
+    "track": "/mp3/44/sweet-dreams.mp3",
+    "title": "сладких снов",
+    "filename": "sweet-dreams.mp3",
+    "category": "female_pack",
+    "tags": [
+      "bye",
+      "casual"
+    ],
+    "transcript": "сладких снов",
+    "file": "voices/sweet-dreams.mp3"
+  },
+  {
+    "id": "43123",
+    "track": "/mp3/44/recommend-a-movie.mp3",
+    "title": "посоветуй фильм",
+    "filename": "recommend-a-movie.mp3",
+    "category": "female_pack",
+    "tags": [
+      "question",
+      "busy",
+      "casual"
+    ],
+    "transcript": "посоветуй фильм",
+    "file": "voices/recommend-a-movie.mp3"
+  },
+  {
+    "id": "43115",
+    "track": "/mp3/44/i-paint-my-nails-and-you.mp3",
+    "title": "ноггти крашу, а ты",
+    "filename": "i-paint-my-nails-and-you.mp3",
+    "category": "female_pack",
+    "tags": [
+      "busy",
+      "casual"
+    ],
+    "transcript": "ноггти крашу, а ты",
+    "file": "voices/i-paint-my-nails-and-you.mp3"
+  },
+  {
+    "id": "43137",
+    "track": "/mp3/44/good-g.mp3",
+    "title": "Хорошо (г)",
+    "filename": "good-g.mp3",
+    "category": "female_pack",
+    "tags": [
+      "confirm",
+      "casual"
+    ],
+    "transcript": "Хорошо (г)",
+    "file": "voices/good-g.mp3"
+  },
+  {
+    "id": "43118",
+    "track": "/mp3/44/it39s-a-pity.mp3",
+    "title": "Очень жаль",
+    "filename": "it39s-a-pity.mp3",
+    "category": "female_pack",
+    "tags": [
+      "reaction",
+      "casual"
+    ],
+    "transcript": "Очень жаль",
+    "file": "voices/it39s-a-pity.mp3"
+  },
+  {
+    "id": "43087",
+    "track": "/mp3/44/damn-why-do-you-like-me.mp3",
+    "title": "блин,почему. Я тебе не нравлюсь",
+    "filename": "damn-why-do-you-like-me.mp3",
+    "category": "female_pack",
+    "tags": [
+      "question",
+      "reaction",
+      "casual"
+    ],
+    "transcript": "блин,почему. Я тебе не нравлюсь",
+    "file": "voices/damn-why-do-you-like-me.mp3"
+  },
+  {
+    "id": "43122",
+    "track": "/mp3/44/clear.mp3",
+    "title": "понятно",
+    "filename": "clear.mp3",
+    "category": "female_pack",
+    "tags": [
+      "confirm",
+      "casual"
+    ],
+    "transcript": "понятно",
+    "file": "voices/clear.mp3"
+  },
+  {
+    "id": "43100",
+    "track": "/mp3/44/agreed-p.mp3",
+    "title": "Договорились (р)",
+    "filename": "agreed-p.mp3",
+    "category": "female_pack",
+    "tags": [
+      "confirm",
+      "casual"
+    ],
+    "transcript": "Договорились (р)",
+    "file": "voices/agreed-p.mp3"
+  },
+  {
+    "id": "43124",
+    "track": "/mp3/44/why-don39t-you-send-me-smileys.mp3",
+    "title": "почему ты мне смайлики не шлешь",
+    "filename": "why-don39t-you-send-me-smileys.mp3",
+    "category": "female_pack",
+    "tags": [
+      "question",
+      "casual"
+    ],
+    "transcript": "почему ты мне смайлики не шлешь",
+    "file": "voices/why-don39t-you-send-me-smileys.mp3"
+  },
+  {
+    "id": "43112",
+    "track": "/mp3/44/guessed-wrong.mp3",
+    "title": "не угадал",
+    "filename": "guessed-wrong.mp3",
+    "category": "female_pack",
+    "tags": [
+      "deny",
+      "casual"
+    ],
+    "transcript": "не угадал",
+    "file": "voices/guessed-wrong.mp3"
+  },
+  {
+    "id": "43098",
+    "track": "/mp3/44/good-evening.mp3",
+    "title": "добрый вечер",
+    "filename": "good-evening.mp3",
+    "category": "female_pack",
+    "tags": [
+      "greeting",
+      "confirm",
+      "casual"
+    ],
+    "transcript": "добрый вечер",
+    "file": "voices/good-evening.mp3"
+  },
+  {
+    "id": "43103",
+    "track": "/mp3/44/how-you-throw-it-be-sure-to-write-it-down.mp3",
+    "title": "как скинешь, обязательно отпиши",
+    "filename": "how-you-throw-it-be-sure-to-write-it-down.mp3",
+    "category": "female_pack",
+    "tags": [
+      "casual"
+    ],
+    "transcript": "как скинешь, обязательно отпиши",
+    "file": "voices/how-you-throw-it-be-sure-to-write-it-down.mp3"
+  },
+  {
+    "id": "43090",
+    "track": "/mp3/44/going-for-a-walk-and-you.mp3",
+    "title": "гулять собираюсь, а ты",
+    "filename": "going-for-a-walk-and-you.mp3",
+    "category": "female_pack",
+    "tags": [
+      "busy",
+      "casual"
+    ],
+    "transcript": "гулять собираюсь, а ты",
+    "file": "voices/going-for-a-walk-and-you.mp3"
+  },
+  {
+    "id": "43089",
+    "track": "/mp3/44/what-are-you-wearing-now.mp3",
+    "title": "в чем ты сейчас одет",
+    "filename": "what-are-you-wearing-now.mp3",
+    "category": "female_pack",
+    "tags": [
+      "question",
+      "casual"
+    ],
+    "transcript": "в чем ты сейчас одет",
+    "file": "voices/what-are-you-wearing-now.mp3"
+  },
+  {
+    "id": "43088",
+    "track": "/mp3/44/i-will-wait-d.mp3",
+    "title": "буду ждать (г)",
+    "filename": "i-will-wait-d.mp3",
+    "category": "female_pack",
+    "tags": [
+      "confirm",
+      "casual"
+    ],
+    "transcript": "буду ждать (г)",
+    "file": "voices/i-will-wait-d.mp3"
+  },
+  {
+    "id": "43095",
+    "track": "/mp3/44/till-tomorrow.mp3",
+    "title": "до завтра",
+    "filename": "till-tomorrow.mp3",
+    "category": "female_pack",
+    "tags": [
+      "bye",
+      "casual"
+    ],
+    "transcript": "до завтра",
+    "file": "voices/till-tomorrow.mp3"
+  },
+  {
+    "id": "43091",
+    "track": "/mp3/44/yes-g.mp3",
+    "title": "Да (г)",
+    "filename": "yes-g.mp3",
+    "category": "female_pack",
+    "tags": [
+      "confirm",
+      "casual"
+    ],
+    "transcript": "Да (г)",
+    "file": "voices/yes-g.mp3"
+  },
+  {
+    "id": "43094",
+    "track": "/mp3/44/something-new-for-me.mp3",
+    "title": "для меня что-то новое",
+    "filename": "something-new-for-me.mp3",
+    "category": "female_pack",
+    "tags": [
+      "reaction",
+      "casual"
+    ],
+    "transcript": "для меня что-то новое",
+    "file": "voices/something-new-for-me.mp3"
+  },
+  {
+    "id": "43142",
+    "track": "/mp3/44/what-should-i-wear-help.mp3",
+    "title": "что мне надеть. поможешь",
+    "filename": "what-should-i-wear-help.mp3",
+    "category": "female_pack",
+    "tags": [
+      "question",
+      "casual"
+    ],
+    "transcript": "что мне надеть. поможешь",
+    "file": "voices/what-should-i-wear-help.mp3"
+  },
+  {
+    "id": "43096",
+    "track": "/mp3/44/good-day.mp3",
+    "title": "доброго времени суток",
+    "filename": "good-day.mp3",
+    "category": "female_pack",
+    "tags": [
+      "greeting",
+      "confirm",
+      "casual"
+    ],
+    "transcript": "доброго времени суток",
+    "file": "voices/good-day.mp3"
   },
   {
     "id": "43125",
-    "file": "voices\\poshlyih-snov.mp3",
-    "filename": "poshlyih-snov.mp3",
-    "transcript": "пошлых снов",
-    "tts_text": "пошлых снов",
+    "track": "/mp3/44/vulgar-dreams.mp3",
+    "title": "пошлых снов",
+    "filename": "vulgar-dreams.mp3",
     "category": "female_pack",
     "tags": [
       "bye",
       "flirt",
       "casual"
-    ]
-  },
-  {
-    "id": "43108",
-    "file": "voices\\mne-eto-interesno.mp3",
-    "filename": "mne-eto-interesno.mp3",
-    "transcript": "мне это интересно",
-    "tts_text": "мне это интересно",
-    "category": "female_pack",
-    "tags": [
-      "reaction",
-      "casual"
-    ]
+    ],
+    "transcript": "пошлых снов",
+    "file": "voices/vulgar-dreams.mp3"
   },
   {
     "id": "43136",
-    "file": "voices\\horosho--voprositelnaya-intonatsiya-.mp3",
-    "filename": "horosho--voprositelnaya-intonatsiya-.mp3",
-    "transcript": "Хорошо ( вопросительная интонация )",
-    "tts_text": "Хорошо",
+    "track": "/mp3/44/okay-interrogative-intonation.mp3",
+    "title": "Хорошо ( вопросительная интонация )",
+    "filename": "okay-interrogative-intonation.mp3",
     "category": "female_pack",
     "tags": [
-      "confirm",
       "casual"
-    ]
+    ],
+    "transcript": "Хорошо ( вопросительная интонация )",
+    "file": "voices/okay-interrogative-intonation.mp3"
+  },
+  {
+    "id": "43108",
+    "track": "/mp3/44/i39m-interested.mp3",
+    "title": "мне это интересно",
+    "filename": "i39m-interested.mp3",
+    "category": "female_pack",
+    "tags": [
+      "casual"
+    ],
+    "transcript": "мне это интересно",
+    "file": "voices/i39m-interested.mp3"
   },
   {
     "id": "43130",
-    "file": "voices\\silno-silno.mp3",
-    "filename": "silno-silno.mp3",
-    "transcript": "сильно сильно",
-    "tts_text": "сильно сильно",
+    "track": "/mp3/44/very-very.mp3",
+    "title": "сильно сильно",
+    "filename": "very-very.mp3",
     "category": "female_pack",
     "tags": [
       "casual"
-    ]
+    ],
+    "transcript": "сильно сильно",
+    "file": "voices/very-very.mp3"
   },
   {
     "id": "43113",
-    "file": "voices\\net-g.mp3",
-    "filename": "net-g.mp3",
-    "transcript": "нет (г)",
-    "tts_text": "нет",
+    "track": "/mp3/44/no-d.mp3",
+    "title": "нет (г)",
+    "filename": "no-d.mp3",
     "category": "female_pack",
     "tags": [
       "deny",
       "casual"
-    ]
-  },
-  {
-    "id": "43143",
-    "file": "voices\\ya-doljna-doveryat.mp3",
-    "filename": "ya-doljna-doveryat.mp3",
-    "transcript": "я должна доверять",
-    "tts_text": "я должна доверять",
-    "category": "female_pack",
-    "tags": [
-      "casual"
-    ]
-  },
-  {
-    "id": "43131",
-    "file": "voices\\skin-muzyiki.mp3",
-    "filename": "skin-muzyiki.mp3",
-    "transcript": "скинь музыки",
-    "tts_text": "скинь музыки",
-    "category": "female_pack",
-    "tags": [
-      "casual"
-    ]
-  },
-  {
-    "id": "43120",
-    "file": "voices\\podskaji-serial.mp3",
-    "filename": "podskaji-serial.mp3",
-    "transcript": "подскажи сериал",
-    "tts_text": "подскажи сериал",
-    "category": "female_pack",
-    "tags": [
-      "question",
-      "casual"
-    ]
+    ],
+    "transcript": "нет (г)",
+    "file": "voices/no-d.mp3"
   },
   {
     "id": "43105",
-    "file": "voices\\knigu-chitayu-a-tyi.mp3",
-    "filename": "knigu-chitayu-a-tyi.mp3",
-    "transcript": "книгу читаю, а ты",
-    "tts_text": "книгу читаю, а ты",
+    "track": "/mp3/44/i-read-a-book-and-you.mp3",
+    "title": "книгу читаю, а ты",
+    "filename": "i-read-a-book-and-you.mp3",
     "category": "female_pack",
     "tags": [
       "busy",
       "casual"
-    ]
+    ],
+    "transcript": "книгу читаю, а ты",
+    "file": "voices/i-read-a-book-and-you.mp3"
+  },
+  {
+    "id": "43143",
+    "track": "/mp3/44/i-must-trust.mp3",
+    "title": "я должна доверять",
+    "filename": "i-must-trust.mp3",
+    "category": "female_pack",
+    "tags": [
+      "casual"
+    ],
+    "transcript": "я должна доверять",
+    "file": "voices/i-must-trust.mp3"
+  },
+  {
+    "id": "43120",
+    "track": "/mp3/44/tell-me-the-series.mp3",
+    "title": "подскажи сериал",
+    "filename": "tell-me-the-series.mp3",
+    "category": "female_pack",
+    "tags": [
+      "question",
+      "casual"
+    ],
+    "transcript": "подскажи сериал",
+    "file": "voices/tell-me-the-series.mp3"
+  },
+  {
+    "id": "43131",
+    "track": "/mp3/44/throw-off-the-music.mp3",
+    "title": "скинь музыки",
+    "filename": "throw-off-the-music.mp3",
+    "category": "female_pack",
+    "tags": [
+      "question",
+      "casual"
+    ],
+    "transcript": "скинь музыки",
+    "file": "voices/throw-off-the-music.mp3"
   },
   {
     "id": "43099",
-    "file": "voices\\dobryiy-den.mp3",
-    "filename": "dobryiy-den.mp3",
-    "transcript": "добрый день",
-    "tts_text": "добрый день",
+    "track": "/mp3/44/good-afternoon.mp3",
+    "title": "добрый день",
+    "filename": "good-afternoon.mp3",
     "category": "female_pack",
     "tags": [
       "greeting",
+      "confirm",
       "casual"
-    ]
+    ],
+    "transcript": "добрый день",
+    "file": "voices/good-afternoon.mp3"
   },
   {
     "id": "46447",
-    "file": "voices\\smeh-131.mp3",
-    "filename": "smeh-131.mp3",
-    "transcript": "Смех 13",
-    "tts_text": "Смех 13",
+    "track": "/mp3/47/laughter-13.mp3",
+    "title": "Смех 13",
+    "filename": "laughter-13.mp3",
     "category": "female_voices",
     "tags": [
       "casual"
-    ]
+    ],
+    "transcript": "Смех 13",
+    "file": "voices/laughter-13.mp3"
   },
   {
     "id": "30229",
-    "file": "voices\\zvuk-jenskogo-ah-ha-jenskiy-golos-31499.mp3",
-    "filename": "zvuk-jenskogo-ah-ha-jenskiy-golos-31499.mp3",
-    "transcript": "Звук женского Ах-ха (женский голос)",
-    "tts_text": "Звук женского Ах-ха",
+    "track": "/mp3/31/the-sound-of-a-female-ah-ha-female-voice.mp3",
+    "title": "Звук женского Ах-ха (женский голос)",
+    "filename": "the-sound-of-a-female-ah-ha-female-voice.mp3",
     "category": "female_voices",
     "tags": [
       "casual"
-    ]
+    ],
+    "transcript": "Звук женского Ах-ха (женский голос)",
+    "file": "voices/the-sound-of-a-female-ah-ha-female-voice.mp3"
   },
   {
     "id": "46448",
-    "file": "voices\\jenskiy-golos-ston.mp3",
-    "filename": "jenskiy-golos-ston.mp3",
-    "transcript": "Женский голос стон",
-    "tts_text": "Женский голос стон",
+    "track": "/mp3/47/female-voice-groan.mp3",
+    "title": "Женский голос стон",
+    "filename": "female-voice-groan.mp3",
     "category": "female_voices",
     "tags": [
       "casual"
-    ]
+    ],
+    "transcript": "Женский голос стон",
+    "file": "voices/female-voice-groan.mp3"
+  },
+  {
+    "id": "46443",
+    "track": "/mp3/47/female-voice-hysterical-cry.mp3",
+    "title": "Женский голос истерическй крик",
+    "filename": "female-voice-hysterical-cry.mp3",
+    "category": "female_voices",
+    "tags": [
+      "casual"
+    ],
+    "transcript": "Женский голос истерическй крик",
+    "file": "voices/female-voice-hysterical-cry.mp3"
   },
   {
     "id": "27586",
-    "file": "voices\\jenskiy-golos-quotschastlivogo-novogo-godaquot-28736.mp3",
-    "filename": "jenskiy-golos-quotschastlivogo-novogo-godaquot-28736.mp3",
-    "transcript": "Женский голос \"Счастливого Нового Года\"",
-    "tts_text": "Женский голос \"Счастливого Нового Года\"",
+    "track": "/mp3/28/female-voice-quothappy-new-yearquot.mp3",
+    "title": "Женский голос &quot;Счастливого Нового Года&quot;",
+    "filename": "female-voice-quothappy-new-yearquot.mp3",
     "category": "female_voices",
     "tags": [
       "casual"
-    ]
+    ],
+    "transcript": "Женский голос &quot;Счастливого Нового Года&quot;",
+    "file": "voices/female-voice-quothappy-new-yearquot.mp3"
   },
   {
-    "id": "86100",
-    "file": "voices\\jenskiy-zvuk-ueeeee-hu.mp3",
-    "filename": "jenskiy-zvuk-ueeeee-hu.mp3",
-    "transcript": "Женский звук уеееее ху",
-    "tts_text": "Женский звук уеееее ху",
+    "id": "46449",
+    "track": "/mp3/47/gentle-singing-female-voice.mp3",
+    "title": "Женский голос нежное пение",
+    "filename": "gentle-singing-female-voice.mp3",
     "category": "female_voices",
     "tags": [
       "casual"
-    ]
+    ],
+    "transcript": "Женский голос нежное пение",
+    "file": "voices/gentle-singing-female-voice.mp3"
+  },
+  {
+    "id": "44234",
+    "track": "/mp3/45/sneeze-10.mp3",
+    "title": "чиханье 10",
+    "filename": "sneeze-10.mp3",
+    "category": "female_voices",
+    "tags": [
+      "casual"
+    ],
+    "transcript": "чиханье 10",
+    "file": "voices/sneeze-10.mp3"
+  },
+  {
+    "id": "46442",
+    "track": "/mp3/47/female-voice-tantrum.mp3",
+    "title": "Женский голос истерика",
+    "filename": "female-voice-tantrum.mp3",
+    "category": "female_voices",
+    "tags": [
+      "casual"
+    ],
+    "transcript": "Женский голос истерика",
+    "file": "voices/female-voice-tantrum.mp3"
+  },
+  {
+    "id": "46242",
+    "track": "/mp3/47/scream-single-female-squeaky-sharp.mp3",
+    "title": "вопль одиночный женский писклявый резкий",
+    "filename": "scream-single-female-squeaky-sharp.mp3",
+    "category": "female_voices",
+    "tags": [
+      "casual"
+    ],
+    "transcript": "вопль одиночный женский писклявый резкий",
+    "file": "voices/scream-single-female-squeaky-sharp.mp3"
+  },
+  {
+    "id": "46445",
+    "track": "/mp3/47/female-voice-slurred-word.mp3",
+    "title": "Женский голос невнятное слово",
+    "filename": "female-voice-slurred-word.mp3",
+    "category": "female_voices",
+    "tags": [
+      "casual"
+    ],
+    "transcript": "Женский голос невнятное слово",
+    "file": "voices/female-voice-slurred-word.mp3"
+  },
+  {
+    "id": "46451",
+    "track": "/mp3/47/female-voice-scream.mp3",
+    "title": "Женский голос крик",
+    "filename": "female-voice-scream.mp3",
+    "category": "female_voices",
+    "tags": [
+      "casual"
+    ],
+    "transcript": "Женский голос крик",
+    "file": "voices/female-voice-scream.mp3"
   },
   {
     "id": "46440",
-    "file": "voices\\jenskiy-golos-vosklitsanie.mp3",
-    "filename": "jenskiy-golos-vosklitsanie.mp3",
-    "transcript": "Женский голос восклицание",
-    "tts_text": "Женский голос восклицание",
+    "track": "/mp3/47/female-voice-exclamation.mp3",
+    "title": "Женский голос восклицание",
+    "filename": "female-voice-exclamation.mp3",
     "category": "female_voices",
     "tags": [
       "casual"
-    ]
+    ],
+    "transcript": "Женский голос восклицание",
+    "file": "voices/female-voice-exclamation.mp3"
+  },
+  {
+    "id": "46450",
+    "track": "/mp3/47/a-woman39s-voice-is-a-terrible-scream.mp3",
+    "title": "Женский голос ужасный вопль",
+    "filename": "a-woman39s-voice-is-a-terrible-scream.mp3",
+    "category": "female_voices",
+    "tags": [
+      "casual"
+    ],
+    "transcript": "Женский голос ужасный вопль",
+    "file": "voices/a-woman39s-voice-is-a-terrible-scream.mp3"
+  },
+  {
+    "id": "46446",
+    "track": "/mp3/47/female-voice-scream.mp3",
+    "title": "Женский голос вопль",
+    "filename": "female-voice-scream.mp3",
+    "category": "female_voices",
+    "tags": [
+      "casual"
+    ],
+    "transcript": "Женский голос вопль",
+    "file": "voices/female-voice-scream.mp3"
   },
   {
     "id": "46444",
-    "file": "voices\\jenskiy-golos-vozglas.mp3",
-    "filename": "jenskiy-golos-vozglas.mp3",
-    "transcript": "Женский голос возглас",
-    "tts_text": "Женский голос возглас",
+    "track": "/mp3/47/female-voice-exclamation.mp3",
+    "title": "Женский голос возглас",
+    "filename": "female-voice-exclamation.mp3",
     "category": "female_voices",
     "tags": [
       "casual"
-    ]
+    ],
+    "transcript": "Женский голос возглас",
+    "file": "voices/female-voice-exclamation.mp3"
   },
   {
     "id": "46452",
-    "file": "voices\\jenskiy-golos-ugar.mp3",
-    "filename": "jenskiy-golos-ugar.mp3",
-    "transcript": "Женский голос угар",
-    "tts_text": "Женский голос угар",
+    "track": "/mp3/47/female-voice-frenzy.mp3",
+    "title": "Женский голос угар",
+    "filename": "female-voice-frenzy.mp3",
     "category": "female_voices",
     "tags": [
       "casual"
-    ]
+    ],
+    "transcript": "Женский голос угар",
+    "file": "voices/female-voice-frenzy.mp3"
+  },
+  {
+    "id": "95964",
+    "track": "/mp3/cats/208/jenskiy-zvuk-ueeeee-hu.mp3",
+    "title": "Женский звук уеееее ху",
+    "filename": "jenskiy-zvuk-ueeeee-hu.mp3",
+    "category": "female_voices",
+    "tags": [
+      "casual"
+    ],
+    "transcript": "Женский звук уеееее ху",
+    "file": "voices/jenskiy-zvuk-ueeeee-hu.mp3"
+  },
+  {
+    "id": "46441",
+    "track": "/mp3/47/wail-mass-noisy-female.mp3",
+    "title": "вопль массовый шумный женский",
+    "filename": "wail-mass-noisy-female.mp3",
+    "category": "female_voices",
+    "tags": [
+      "casual"
+    ],
+    "transcript": "вопль массовый шумный женский",
+    "file": "voices/wail-mass-noisy-female.mp3"
   }
 ]

@@ -68,31 +68,77 @@ def _similarity(a: str, b: str) -> float:
     return SequenceMatcher(None, a.lower(), b.lower()).ratio()
 
 
-def pick_voice_for(text: str) -> dict | None:
+# ─── Détection de contexte pour sélection vocale ─────────────
+
+_CTX_CONFIRM  = re.compile(r"\bок\b|хорошо|договорились|согласна|ладно|давай|ага|угу|конечн|приду|буду там", re.I)
+_CTX_DENY     = re.compile(r"\bнет\b|не могу|не хочу|не буду|не получится|нельзя|пока нет|не сейчас", re.I)
+_CTX_GREET    = re.compile(r"привет|здравствуй|доброе утро|добрый вечер|добрый день|хай\b", re.I)
+_CTX_BYE      = re.compile(r"пока|до свидания|спокойной ночи|до завтра|до встречи|удачи тебе", re.I)
+_CTX_FLIRT    = re.compile(r"нравишься|хочу тебя|красивый|симпатичн|скучаю|влюбилась|милый|солнышко", re.I)
+_CTX_BUSY     = re.compile(r"занята|смотрю|гуляю|читаю|работаю|крашу|иду спать|устала|позже напишу", re.I)
+_CTX_REACTION = re.compile(r"интересно|странно|прикольно|не поняла|серьёзно|ничего себе|ой\b|вот это", re.I)
+
+_TAG_POOLS = {
+    "confirm":  ["confirm"],
+    "deny":     ["deny"],
+    "greeting": ["greeting"],
+    "bye":      ["bye"],
+    "flirt":    ["flirt"],
+    "busy":     ["busy"],
+    "reaction": ["reaction"],
+    "casual":   ["casual"],
+}
+
+# Vocaux à ne jamais envoyer de façon non sollicitée (trop sexuels / hors contexte)
+_NSFW_TRANSCRIPTS = {
+    "как тебе моя попа", "хочешь меня", "я тебя люблю",
+    "мм,какой большой хочу тебя", "а грудь нравится",
+    "женский голос стон", "женский звук уеееее ху",
+    "женский голос восклицание", "женский голос возглас",
+}
+
+def _detect_context(eva_text: str, user_text: str = "") -> str:
+    """Détecte le contexte dominant du message d'Eva pour choisir la bonne pool vocale."""
+    t = eva_text.lower() + " " + user_text.lower()
+    if _CTX_GREET.search(t):   return "greeting"
+    if _CTX_BYE.search(t):     return "bye"
+    if _CTX_FLIRT.search(t):   return "flirt"
+    if _CTX_CONFIRM.search(t): return "confirm"
+    if _CTX_DENY.search(t):    return "deny"
+    if _CTX_BUSY.search(t):    return "busy"
+    if _CTX_REACTION.search(t): return "reaction"
+    return "casual"
+
+
+def pick_voice_for(text: str, user_text: str = "", fallback: bool = True,
+                   exclude: set | None = None) -> dict | None:
     """
-    Cherche dans le catalogue le vocal dont le transcript est le plus proche
-    du texte donné.  Retourne l'entrée catalogue ou None.
+    Sélectionne le meilleur vocal pour ce message.
+    1. Essaie une correspondance exacte/fuzzy sur le transcript.
+    2. Si aucun match satisfaisant ET fallback=True → sélection par contexte.
+    exclude : set de filenames déjà envoyés à ce user (jamais répéter).
     """
+    import random as _random
     catalog = _load_catalog()
     if not catalog:
         return None
 
+    exclude = exclude or set()
     text_lower = text.lower()
-    best_score  = 0.0
-    best_entry  = None
+    best_score = 0.0
+    best_entry = None
 
     for entry in catalog:
+        if entry.get("filename") in exclude:
+            continue
         transcript = entry.get("transcript", "").lower()
         tags       = entry.get("tags", [])
 
         score = _similarity(text_lower, transcript)
 
-        # Boost si un mot-clé du texte est dans le transcript
         for word in re.findall(r'\w+', text_lower):
             if len(word) > 3 and word in transcript:
                 score += 0.25
-
-        # Boost si les tags correspondent aux mots du texte
         for tag in tags:
             if tag in text_lower:
                 score += 0.15
@@ -101,12 +147,41 @@ def pick_voice_for(text: str) -> dict | None:
             best_score = score
             best_entry = entry
 
-    # Seuil minimum — évite d'envoyer un vocal complètement hors sujet
-    if best_score < 0.15:
+    # Seuil : 0.10 — mais jamais NSFW sans demande explicite
+    if best_score >= 0.10 and best_entry:
+        transcript_low = best_entry.get("transcript", "").lower()
+        if transcript_low not in _NSFW_TRANSCRIPTS:
+            log("VOX", f"Match transcript (score={best_score:.2f})", best_entry.get("transcript", ""))
+            return best_entry
+        else:
+            log("VOX", f"Match NSFW ignoré (score={best_score:.2f})", best_entry.get("transcript", ""))
+
+    # ── Fallback contextuel : pool par catégorie ──
+    if not fallback:
         return None
 
-    log("VOX", f"Pick catalogue (score={best_score:.2f})", best_entry.get("transcript", ""))
-    return best_entry
+    context = _detect_context(text, user_text)
+    target_tags = _TAG_POOLS.get(context, ["casual"])
+
+    # Pool filtrée : bonne catégorie + pas NSFW + pas déjà envoyé
+    safe = [
+        e for e in catalog
+        if any(t in e.get("tags", []) for t in target_tags)
+        and e.get("transcript", "").lower() not in _NSFW_TRANSCRIPTS
+        and e.get("filename") not in exclude
+    ]
+    if not safe:
+        safe = [
+            e for e in catalog
+            if e.get("transcript", "").lower() not in _NSFW_TRANSCRIPTS
+            and e.get("filename") not in exclude
+        ]
+    if not safe:
+        return None  # tous les vocaux ont déjà été envoyés
+
+    choice = _random.choice(safe)
+    log("VOX", f"Fallback contextuel (ctx={context})", choice.get("transcript", ""))
+    return choice
 
 
 def pick_random_voice(tags: list[str] | None = None) -> dict | None:
@@ -204,14 +279,15 @@ class VoiceAgent:
             log("ERR", f"TTS échoué : {e}")
             return None
 
-    async def generate(self, text: str) -> tuple[BytesIO | None, str | None]:
+    async def generate(self, text: str, user_text: str = "") -> tuple[BytesIO | None, str | None]:
         """
         Point d'entrée principal.
-        Essaie d'abord le catalogue, puis la TTS.
+        1. Match catalogue (fuzzy + fallback contextuel) — toujours tente de trouver quelque chose
+        2. TTS si token disponible (fallback)
         Retourne (BytesIO, transcript_utilisé) ou (None, None).
         """
-        # 1. Catalogue
-        entry = pick_voice_for(text)
+        # 1. Catalogue (avec fallback contextuel intégré)
+        entry = pick_voice_for(text, user_text=user_text, fallback=True)
         if entry:
             path = Path(entry["file"])
             if path.exists():
@@ -219,7 +295,7 @@ class VoiceAgent:
                 buf.name = "voice.mp3"
                 return buf, entry["transcript"]
 
-        # 2. TTS
+        # 2. TTS (seulement si token configuré)
         buf = await self.generate_tts(text)
         if buf:
             return buf, text

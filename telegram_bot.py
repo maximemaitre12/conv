@@ -1,5 +1,5 @@
 """
-Eva Bot — Telegram User Account (Telethon)
+Alina Bot — Telegram User Account (Telethon)
 Délais humains + vocaux via ZvukoGram TTS
 """
 
@@ -14,10 +14,14 @@ import time as _time
 import io
 import atexit
 import msvcrt
+import base64
 from datetime import datetime
+from pathlib import Path
 from telethon import TelegramClient, events
 from telethon.errors import SessionPasswordNeededError
-from openai import OpenAI
+from telethon.tl.types import SendMessageRecordAudioAction
+from telethon.tl.functions.account import UpdateStatusRequest
+import anthropic
 from dotenv import load_dotenv
 from soul import SOUL
 from zvukogram_agent import get_voice_agent
@@ -71,11 +75,16 @@ SESSION  = "eva_session"
 
 MY_ID = 8086331281  # ID du compte Eva
 
-# Probabilité qu'Eva envoie un vocal spontanément (après tour 4)
-VOICE_SPONTANEOUS_PROB = float(os.getenv("VOICE_PROB", "0.18"))
+# Probabilité qu'Eva envoie un vocal spontanément (après tour 2)
+VOICE_SPONTANEOUS_PROB = float(os.getenv("VOICE_PROB", "0.0"))
+VOICE_ENABLED = os.getenv("VOICE_ENABLED", "0") == "1"
 
-client_openai = OpenAI(
-    api_key=os.getenv("OPENAI_API_KEY"),
+# Vidéo d'Eva — envoyée sur demande, 1 fois max par conversation
+_VIDEO_PATH = Path("ScreenRecording_04-14-2026 11-31-05_1.mp4")
+_video_sent_users: set[str] = set()  # user_ids ayant déjà reçu la vidéo
+
+client_anthropic = anthropic.Anthropic(
+    api_key=os.getenv("ANTHROPIC_API_KEY"),
     http_client=httpx.Client(verify=False),
 )
 
@@ -94,8 +103,12 @@ _BUTTON_RE = re.compile(
     re.UNICODE,
 )
 
-# Utilisateurs à qui Eva a déjà envoyé un vocal (max 1 par conversation)
-voice_sent_users: set[str] = set()
+# Compteur de vocaux envoyés par conversation
+voice_sent_users: dict[str, int] = {}
+
+# Timestamp du dernier envoi par utilisateur — cooldown anti-burst
+_last_sent_to: dict[str, float] = {}
+SEND_COOLDOWN_MIN = 45.0  # secondes minimum entre deux envois au même user
 
 # ─── Logs ─────────────────────────────────────────────────────
 
@@ -118,10 +131,38 @@ def load_histories():
         with open(HISTORY_FILE, "r", encoding="utf-8") as f:
             data = json.load(f)
         # voice_sent_users est stocké dans une clé spéciale du fichier
-        voice_sent_users = set(data.pop(_VOICE_SENT_KEY, []))
+        raw_vsu = data.pop(_VOICE_SENT_KEY, {})
+        # Compat ancienne version (list) → dict compteur
+        if isinstance(raw_vsu, list):
+            voice_sent_users = {uid: 1 for uid in raw_vsu}
+        else:
+            voice_sent_users = raw_vsu
         histories = data
+        # Inférer la langue de chaque conversation depuis les derniers messages user
+        for uid, msgs in histories.items():
+            if uid == _VOICE_SENT_KEY:
+                continue
+            user_msgs = [m["content"] for m in msgs if m.get("role") == "user"]
+            for msg in reversed(user_msgs[-5:]):
+                if _detect_lang(msg) == "fr":
+                    _user_lang[uid] = "fr"
+                    break
+        total_vox = sum(voice_sent_users.values())
         log("MEM", f"Historique charge — {len(histories)} conversation(s), "
-                   f"{len(voice_sent_users)} vocal(ux) deja envoye(s)")
+                   f"{total_vox} vocal(ux) deja envoye(s)")
+        # Reconstruire les compteurs poniatno et smirk depuis l'historique
+        for uid, msgs in histories.items():
+            if uid == _VOICE_SENT_KEY:
+                continue
+            assistant_msgs = [m["content"] for m in msgs if m.get("role") == "assistant"]
+            # poniatno : compter les occurrences dans toute la conv
+            cnt = sum(1 for m in assistant_msgs if re.search(r"понятно", m, re.IGNORECASE))
+            if cnt > 0:
+                _poniatno_count[uid] = cnt
+            # smirk : trouver le dernier tour où 😏 a été envoyé
+            for turn_idx, msg in enumerate(assistant_msgs):
+                if "\U0001f60f" in msg:
+                    _smirk_last[uid] = turn_idx + 1  # tour 1-based approximatif
     else:
         log("MEM", "Aucun historique — demarrage a zero")
 
@@ -129,10 +170,16 @@ def save_histories():
     """Sauvegarde synchrone — utiliser save_histories_async() depuis un contexte async."""
     tmp = HISTORY_FILE + ".tmp"
     data = dict(histories)
-    data[_VOICE_SENT_KEY] = list(voice_sent_users)
+    data[_VOICE_SENT_KEY] = dict(voice_sent_users)
     with open(tmp, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
-    os.replace(tmp, HISTORY_FILE)  # écriture atomique — évite la corruption en cas de crash
+    try:
+        os.replace(tmp, HISTORY_FILE)  # écriture atomique — évite la corruption en cas de crash
+    except OSError:
+        # Windows peut refuser os.replace si le fichier est ouvert — fallback
+        import shutil
+        shutil.copy2(tmp, HISTORY_FILE)
+        os.remove(tmp)
 
 async def save_histories_async():
     """Sauvegarde non-bloquante pour l'event loop asyncio."""
@@ -148,6 +195,12 @@ _BANNED_WORDS = re.compile(
     r"|звучит как план"
     r"|никогда не знаешь"
     r"|стоит попробовать"
+    r"|попробовать более"        # conseils sommeil/vie
+    r"|чтобы расслабиться"       # conseil relaxation
+    r"|попробуй "                # conseil direct
+    r"|советую"
+    r"|помогает при"
+    r"|хорошо помогает"
     r"|лондон идеален"
     r"|столько всего"
     r"|каждый по.своему"
@@ -163,11 +216,62 @@ _BANNED_WORDS = re.compile(
     r"|береги себя"
     r"|хорошего дня"
     r"|не стесняйся писать"
+    r"|не стесняйся спрашивать"
+    r"|если есть вопросы"
+    r"|если будут вопросы"
+    r"|можешь спрашивать"
+    r"|задавай вопросы"
+    r"|обращайся"
+    r"|стресс сказывается"       # diagnostic de bot
+    r"|режим сна"                # conseil médical
+    r"|перед сном"               # conseil relaxation
+    r"|говорю только по-русски"  # réponse d'erreur de bot
+    r"|стоит найти"              # conseil de vie
+    r"|место для отдыха"         # conseil détente
     r"|с удовольствием"
     r"|то чувство когда"
     r"|как интересно"
     r"|это интересно"
     r"|это классно"
+    r"|о, интересно"          # validation template AI
+    r"|иногда такое"          # variante бывает
+    r"|просто болтаем"        # justification de bot
+    r"|ничё заготовленного"   # justification de bot
+    r"|никакого заготовленного"
+    r"|я тут чтобы"           # description de chatbot
+    r"|я здесь чтобы"
+    r"|давай лучше"           # redirect bot systématique
+    r"|расскажи лучше"        # redirect bot systématique
+    r"|попробуем ещё раз"     # service client
+    r"|я предпочитаю"         # trop formel/corporate
+    r"|вполне реальн"         # nier être un bot = tell de bot
+    r"|я в порядке, спасибо"  # réponse service client
+    r"|силой и глубиной"      # critique musicale encyclopédique
+    r"|совсем другое настроение, но тоже"  # critique musicale encyclopédique
+    r"|цепляет"               # critique style encyclopédique
+    r"|это важно, чтобы"      # version banned phrase
+    r"|буду ждать"            # trop patient/formel
+    r"|наверняка ещё"         # réassurance de bot
+    r"|наверняка что-то"
+    r"|договорились пообщаться"  # phrase bizarre scriptée
+    r"|для чата"                 # invention de contexte inexistant
+    r"|просто для разговора"     # trop explicatif/justificatif
+    r"|интересно у тебя всё складывается"  # approbation de bot
+    r"|есть ещё вопросы или темы"  # service client chatbot
+    r"|не переборщи"             # conseil de vie
+    r"|главное.*не переб"        # "главное, не переборщить"
+    r"|не играй с так"           # "не играй с таким"
+    r"|будь осторожн"            # conseil sécurité
+    r"|осторожн"                 # toutes formes d'осторожно
+    # Formes masculines — Eva est une femme, jamais de genre masculin
+    r"|\bя понял\b"   # doit être "поняла"
+    r"|\bя устал\b"   # doit être "устала"
+    r"|\bя был\b"     # doit être "была"
+    r"|\bя пошёл\b"   # doit être "пошла"
+    r"|\bя сказал\b"  # doit être "сказала"
+    r"|\bя думал\b"   # doit être "думала"
+    r"|\bя хотел\b"   # doit être "хотела"
+    r"|\bя рад\b"     # doit être "рада"
     # Mots seuls — stems pour couvrir toutes les formes fléchies
     r"|конечн"       # конечно, конечная...
     r"|разумеется"
@@ -181,12 +285,73 @@ _BANNED_WORDS = re.compile(
     r"|потряс"       # потрясающе, потрясающий
     r"|удивительн"   # удивительно, удивительный
     r"|заряжа"       # заряжает, заряжается, заряжаться
+    # Tournures trop « consultant IA » / service client
+    r"|спасибо за"   # спасибо за понимание / спасибо за вопрос
+    r"|надеюсь.*понравится"
+    r"|рада что"     # рада что спросил = service client
+    r"|это не просто"  # rhétorique IA
+    r"|именно поэтому"
+    r"|на самом деле" # sur-explication
+    r"|в целом"       # bilan de bot
+    r"|в общем-то"
+    r"|это ощущение"  # description émotionnelle générique
+    r"|я стараюсь"    # effort de bot
+    r"|мне важно"     # valeur de bot
+    r"|звучит заманчиво"   # enthousiasme de bot
+    r"|звучит интересно"
+    r"|звучит неплохо"
+    r"|спасибо что рассказал"  # service client
+    r"|спасибо, что"           # service client
+    r"|это меняет"             # rhétorique IA
+    # Aveux d'être une IA — absolu
+    r"|спрошу у ии"
+    r"|спрошу у искусственного"
+    r"|у меня нет доступа"
+    r"|как языковая модель"
+    r"|как ии"
+    # Questions type questionnaire de rencontres — jamais posées par une vraie personne
+    r"|у тебя есть хобби"
+    r"|что.*делаешь.*свободное время"
+    r"|чем.*увлекаешься"
+    r"|что тебе нравится делать"
+    r"|есть ли у тебя"   # questionnaire formel
+    r"|расскажи о себе"  # interview bot
+    r"|что-нибудь интересное"
     ,
     re.IGNORECASE | re.UNICODE,
 )
 
+# Compte d'occurrences de "понятно" par conversation — limité à 1
+_poniatno_count: dict[str, int] = {}
+
+# Compte d'occurrences de 😏 par conversation — max 1 toutes les 5 réponses
+_smirk_last: dict[str, int] = {}   # user_id → numéro de tour du dernier 😏
+
+def _check_poniatno(user_id: str, text: str) -> bool:
+    """Retourne True si "понятно" apparaît et le quota est dépassé (max 1 par conversation)."""
+    if re.search(r"понятно", text, re.IGNORECASE):
+        count = _poniatno_count.get(user_id, 0)
+        if count >= 1:
+            return True  # déjà utilisé une fois → refaire générer
+        _poniatno_count[user_id] = count + 1
+    return False
+
 # Emojis explicitement interdits (выдают бота)
-_FORBIDDEN_EMOJIS = re.compile(r"[😊🙂😄🤗👍❤️]")
+# Seuls 😏 et 😐 sont autorisés — tout le reste est interdit
+_FORBIDDEN_EMOJIS = re.compile(r"[😊🙂😄🤗👍❤️😀😁😂🥰😍🤩😘😗😙😚😛😝😜🤪🤨🧐🤓😎🥳😒😞😔😟😕🙁☹️😣😖😫😩🥺😢😭😤😠😡🤬🤯😳🥵🥶😱😨😰😥😓🤔🤭🤫🤥😶😑😬🙄😯😦😧😮😲🥱😴🤤😪😵🤐🥴🤢🤮🤧😷🤒🤕🤑🤠😈👿👹👺💀☠️👻👽👾🤖💩😺😸😹😻😼😽🙀😿😾😉🤗]")
+
+# Détection langue française
+_FRENCH_RE = re.compile(
+    r"\b(je|tu|il|elle|nous|vous|ils|elles|le|la|les|un|une|des|et|est|pas|mais|avec|pour|dans|sur|qui|que|quoi|comment|bonjour|salut|merci|oui|non|vas|veux|peux|vais|suis|fait|dit|rien|bien|très|aussi|déjà|encore|toujours|jamais|parfois|c'est|j'ai|t'as|qu'est|pourquoi)\b",
+    re.IGNORECASE
+)
+_user_lang: dict[str, str] = {}
+
+def _detect_lang(text: str) -> str:
+    """Détecte si le message est en français. Sinon retourne 'ru' (défaut)."""
+    if _FRENCH_RE.search(text):
+        return "fr"
+    return "ru"
 
 # Mots anglais (hors noms propres acceptés)
 _ENGLISH_WORD_RE = re.compile(r"\b[a-zA-Z]{3,}\b")
@@ -195,6 +360,17 @@ _ENGLISH_WHITELIST = re.compile(
     r"|https?://\S+",
     re.IGNORECASE,
 )
+
+def _typing_delay(text: str) -> float:
+    """Délai de saisie humain — variable et naturel.
+    - Vitesse de frappe : 1.0–4.0 chars/sec (grande variation)
+    - Pause de réflexion : 1–8s (on hésite toujours un peu avant d'envoyer)
+    - Min 5s, max 25s
+    """
+    chars_per_sec = random.uniform(1.0, 4.0)
+    base = len(text) / chars_per_sec
+    think_pause = random.uniform(1.0, 8.0)
+    return max(5.0, min(25.0, base + think_pause))
 
 def _has_banned(text: str) -> bool:
     return bool(_BANNED_WORDS.search(text))
@@ -207,19 +383,159 @@ def _has_english(text: str) -> bool:
     cleaned = _ENGLISH_WHITELIST.sub("", text)
     return bool(_ENGLISH_WORD_RE.search(cleaned))
 
+# Détecte une lettre latine collée à du cyrillique (ex: "vестфилд", "Wестмолл")
+_MIXED_SCRIPT_RE = re.compile(r'[a-zA-Z][а-яёА-ЯЁ]|[а-яёА-ЯЁ][a-zA-Z]')
+
+def _has_mixed_script(text: str) -> bool:
+    """Détecte un mélange latin/cyrillique dans un même mot (bug GPT encodage)."""
+    cleaned = _ENGLISH_WHITELIST.sub("", text)
+    return bool(_MIXED_SCRIPT_RE.search(cleaned))
+
+def _has_exclamation(text: str) -> bool:
+    """'!' = enthousiasme de bot — jamais dans les messages d'Eva."""
+    return "!" in text
+
 def _fix_reply(text: str) -> str:
-    """Post-processing : force minuscule en début de message."""
+    """Post-processing non contournable : tirets, point final, minuscule, '!'."""
+    # Règle absolue : jamais de tiret
+    text = text.replace(" — ", ", ")
+    text = text.replace("—", ", ")
+    text = re.sub(r" - ", ", ", text)
+    # Règle absolue : jamais de '!' — signal bot enthousiaste
+    text = text.replace("!", "")
+    # Règle absolue : jamais de point final (grille le bot)
+    stripped = text.rstrip()
+    if stripped.endswith(".") and not stripped.endswith("..."):
+        text = stripped[:-1]
+    # Minuscule sur la 1ère lettre
     if text and text[0].isupper():
         text = text[0].lower() + text[1:]
-    return text
+    return text.strip()
 
-def _reply_is_clean(text: str) -> bool:
+_DASH_RE = re.compile(r" — |—| - ")
+
+def _split_message(text: str) -> list[str]:
+    """
+    Découpe un message long en 2 parties naturelles pour simuler plusieurs SMS.
+    Ne découpe que si > 40 chars ET un point naturel existe dans le tiers central.
+    """
+    if len(text) <= 40:
+        return [text]
+    # Cherche un ". " ou une virgule dans le tiers central du message
+    lo = len(text) // 4
+    hi = (3 * len(text)) // 4
+    # Priorité au ". "
+    idx = text.find(". ", lo, hi)
+    if idx != -1:
+        a = text[:idx].strip()
+        b = text[idx + 2:].strip()
+        if a and b:
+            return [_fix_reply(a), _fix_reply(b)]
+    # Sinon ", " dans la moitié droite
+    idx = text.find(", ", lo, hi)
+    if idx != -1:
+        a = text[:idx].strip()
+        b = text[idx + 2:].strip()
+        if a and b and len(b) > 8:
+            return [_fix_reply(a), _fix_reply(b)]
+    return [text]
+
+def _has_dash(text: str) -> bool:
+    """Règle absolue : jamais de tiret dans les messages."""
+    return bool(_DASH_RE.search(text))
+
+def _ends_with_dot(text: str) -> bool:
+    """Un point final grille le bot — les vrais gens ne finissent pas leurs SMS par un point."""
+    return bool(text) and text.rstrip().endswith(".")
+
+def _is_duplicate_reply(user_id: str, text: str) -> bool:
+    """True si Eva a déjà envoyé exactement ou quasi ce message dans cette convo."""
+    if not user_id or not text:
+        return False
+    norm = text.strip().lower()
+    prev = histories.get(user_id, [])
+    for m in prev:
+        if m["role"] == "assistant":
+            if m["content"].strip().lower() == norm:
+                return True
+    return False
+
+def _count_recent_questions(user_id: str, window: int = 4) -> int:
+    """Compte combien de messages d'Eva dans les <window> derniers échanges se terminent par '?'."""
+    msgs = [m["content"] for m in histories.get(user_id, []) if m["role"] == "assistant"]
+    return sum(1 for m in msgs[-window:] if "?" in m)
+
+def _max_tokens_for_input(user_msg: str) -> int:
+    """Plafonne max_tokens selon la longueur du message entrant — miroir naturel."""
+    n = len(user_msg.strip())
+    if n <= 10:
+        return 60    # "ок" / "норм" → réponse ultra-courte
+    if n <= 40:
+        return 120   # phrase courte → réponse courte
+    if n <= 120:
+        return 220   # message moyen → réponse modérée
+    return 350       # long message → peut répondre plus longtemps
+
+def _build_reminders(user_id: str, turn: int, user_msg: str) -> list[dict]:
+    """Construit les injections système dynamiques pour ce tour."""
+    injections = []
+
+    # ── Rappel périodique des règles critiques (tours 5, 10, 15 …) ──
+    if turn >= 5 and turn % 5 == 0:
+        injections.append({
+            "role": "user",
+            "content": (
+                "[SYSTÈME RAPPEL — règles absolues]\n"
+                "1. Minuscules SEULEMENT — jamais de majuscule sauf noms propres\n"
+                "2. Jamais '!' dans aucun message\n"
+                "3. Jamais le schéma [réaction] + [info sur toi] + [question]\n"
+                "4. Jamais de liste (virgule, virgule, virgule)\n"
+                "5. Réponse proportionnelle à son message — s'il est court, toi aussi\n"
+                "6. Tu es Алина, 21 ans, de Moscou, habites Camden, pas étudiante"
+            ),
+        })
+
+    # ── Alerte taux de questions élevé ──
+    recent_q = _count_recent_questions(user_id, window=4)
+    if recent_q >= 1:
+        injections.append({
+            "role": "user",
+            "content": (
+                f"[SYSTÈME] Tu as posé {recent_q} question(s) dans tes 4 derniers messages. "
+                "Pour CE message : NE TERMINE PAS par '?'. "
+                "Réagis seulement, ne pose aucune question."
+            ),
+        })
+
+    return injections
+
+def _reply_is_clean(text: str, user_id: str = "", turn: int = 0, lang: str = "ru") -> bool:
     """True si le message passe tous les filtres qualité."""
+    is_fr = (lang == "fr")
     return (
         not _has_banned(text)
         and not _has_forbidden_emoji(text)
-        and not _has_english(text)
+        and (is_fr or not _has_english(text))
+        and (is_fr or not _has_mixed_script(text))
+        and not _has_dash(text)
+        and not _has_exclamation(text)
+        and not (user_id and _check_poniatno_peek(user_id, text))
+        and not (user_id and turn and _check_smirk_peek(user_id, text, turn))
+        and not (user_id and _is_duplicate_reply(user_id, text))
     )
+
+def _check_poniatno_peek(user_id: str, text: str) -> bool:
+    """Vérifie sans incrémenter si понятно dépasserait le quota (peek only)."""
+    if re.search(r"понятно", text, re.IGNORECASE):
+        return _poniatno_count.get(user_id, 0) >= 1
+    return False
+
+def _check_smirk_peek(user_id: str, text: str, turn: int) -> bool:
+    """Bloque 😏 si utilise il y a moins de 5 tours."""
+    if "😏" in text:
+        last = _smirk_last.get(user_id, -99)
+        return (turn - last) < 5
+    return False
 
 # ─── Génération réponse OpenAI ────────────────────────────────
 
@@ -229,7 +545,15 @@ def get_eva_response(user_id: str, username: str, user_message: str) -> str:
         log("NEW", f"Nouvelle conversation", f"user={username} id={user_id}")
 
     turn = len(histories[user_id]) // 2 + 1
-    log("GPT", f"Generation reponse (tour {turn})", f"user={username}")
+
+    # Détection et mémorisation de la langue
+    detected = _detect_lang(user_message)
+    if detected == "fr":
+        _user_lang[user_id] = "fr"
+    elif user_id not in _user_lang:
+        _user_lang[user_id] = "ru"
+    lang = _user_lang[user_id]
+    log("GPT", f"Generation reponse (tour {turn}) [{lang}]", f"user={username}")
 
     histories[user_id].append({"role": "user", "content": user_message})
 
@@ -238,7 +562,12 @@ def get_eva_response(user_id: str, username: str, user_message: str) -> str:
     if len(histories[user_id]) > MAX_HISTORY:
         histories[user_id] = histories[user_id][-MAX_HISTORY:]
 
-    # ── Injection tour 1 : forcer "привет)" sans question ──
+    # ── Injection tour 1 : forcer "привет)" SEULEMENT si l'user a envoyé un salut ──
+    _GREETING_RE = re.compile(
+        r"^[\W]*(привет|хай|hi|hey|hello|yo|здравствуй|ку|ку-ку|хэй|прив|хеllo|sup)[\W]*$",
+        re.IGNORECASE
+    )
+    _is_first_greeting = (turn == 1 and _GREETING_RE.match(user_message.strip()))
     _turn1_injection = {
         "role": "user",
         "content": (
@@ -246,7 +575,7 @@ def get_eva_response(user_id: str, username: str, user_message: str) -> str:
             "Réponds UNIQUEMENT avec 'привет)' — rien d'autre, aucune question, "
             "aucun emoji, aucune salutation enthousiaste. Un seul mot."
         ),
-    } if turn == 1 else None
+    } if _is_first_greeting else None
 
     # ── Injection anti-lien double ──
     _link_in_history = any(
@@ -262,28 +591,58 @@ def get_eva_response(user_id: str, username: str, user_message: str) -> str:
         ),
     } if _link_in_history else None
 
+    # ── Injection langue française ──
+    _lang_injection = {
+        "role": "user",
+        "content": (
+            "[SYSTÈME] L'utilisateur écrit en FRANÇAIS. "
+            "Réponds UNIQUEMENT en français, même style court et naturel, "
+            "même caractère qu'en russe. Minuscules, pas de '!', pas de listes."
+        ),
+    } if lang == "fr" else None
+
+    # ── Calcul max_tokens selon longueur du message entrant ──
+    _max_tok = _max_tokens_for_input(user_message)
+
+    # ── Injections dynamiques (rappels périodiques + alerte questions) ──
+    _dynamic_injections = _build_reminders(user_id, turn, user_message)
+
     reply = ""
     for attempt in range(4):
         messages = [{"role": "system", "content": SOUL}] + histories[user_id]
 
+        # Injections fixes
         if _turn1_injection:
             messages.append(_turn1_injection)
         if _link_injection:
             messages.append(_link_injection)
+        if _lang_injection:
+            messages.append(_lang_injection)
+
+        # Injections dynamiques (rappels règles + alerte questions)
+        for inj in _dynamic_injections:
+            messages.append(inj)
 
         if attempt > 0:
             issues = []
             if _has_banned(reply):
                 issues.append(
-                    "mots interdits détectés (конечн/здоров/восхищ/заряжа/впечатля/"
-                    "вдохновля/потряс/удивительн/замечательн/незабываем/"
-                    "звучит как план/столько всего/каждый по-своему/"
-                    "приятно познакомиться/то чувство когда/если захочется дай знать)"
+                    "mots interdits: конечн/здоров/восхищ/заряжа/впечатля/вдохновля/"
+                    "потряс/удивительн/замечательн/незабываем/звучит как план/"
+                    "столько всего/каждый по-своему/на самом деле/в целом/это ощущение/"
+                    "я стараюсь/мне важно/расскажи о себе/у тебя есть хобби"
                 )
             if _has_forbidden_emoji(reply):
-                issues.append("emoji interdit présent (😊🙂😄🤗👍❤️ — JAMAIS ces emojis)")
-            if _has_english(reply):
-                issues.append("mot anglais présent — parle UNIQUEMENT en russe")
+                issues.append("emoji STRICTEMENT interdit — seuls 😏 ou 😐 autorisés. Ne copie JAMAIS les emojis de l'utilisateur (surtout 😂 🙂 ❤️). Réponds SANS aucun emoji.")
+            if lang == "ru" and _has_english(reply):
+                issues.append("mot anglais (parle UNIQUEMENT en russe)")
+            if _has_dash(reply):
+                issues.append("tiret présent (— ou -): JAMAIS de tiret")
+            # point final géré par _fix_reply — pas de retry nécessaire
+            if _has_exclamation(reply):
+                issues.append("'!' interdit: Eva n'est jamais enthousiaste de façon exagérée")
+            if _check_poniatno_peek(user_id, reply):
+                issues.append("'понятно' déjà utilisé: autre formulation")
             messages.append({
                 "role": "user",
                 "content": (
@@ -292,27 +651,54 @@ def get_eva_response(user_id: str, username: str, user_message: str) -> str:
                 ),
             })
 
-        response = client_openai.chat.completions.create(
-            model="gpt-4o",
-            max_tokens=400,
-            messages=messages,
+        # Sépare system des messages user/assistant pour Anthropic
+        anthropic_messages = [m for m in messages if m["role"] != "system"]
+        response = client_anthropic.messages.create(
+            model="claude-sonnet-4-6",
+            max_tokens=_max_tok,
+            system=SOUL,
+            messages=anthropic_messages,
         )
-        reply = response.choices[0].message.content.strip()
+        reply = _fix_reply(response.content[0].text.strip())
 
-        if _reply_is_clean(reply):
+        if _reply_is_clean(reply, user_id, turn, lang):
             break
+        reasons = [
+            k for k, v in [
+                ("banned",   _has_banned(reply)),
+                ("emoji",    _has_forbidden_emoji(reply)),
+                ("en",       lang == "ru" and _has_english(reply)),
+                ("mixed",    lang == "ru" and _has_mixed_script(reply)),
+                ("dash",     _has_dash(reply)),
+
+                ("excl",     _has_exclamation(reply)),
+                ("poniatno", _check_poniatno_peek(user_id, reply)),
+                ("smirk",   _check_smirk_peek(user_id, reply, turn)),
+                ("dup",      _is_duplicate_reply(user_id, reply)),
+            ] if v
+        ]
         log("WRN",
             f"Reponse non conforme (tentative {attempt + 1}/4)",
-            f'banned={_has_banned(reply)} emoji={_has_forbidden_emoji(reply)} '
-            f'en={_has_english(reply)} | "{reply[:60]}"')
+            f'raisons={reasons} | "{reply[:60]}"')
 
     # ── Post-processing : force minuscule sur la 1ère lettre ──
     reply = _fix_reply(reply)
 
+    # ── Filtre dur ")" — interdit sauf "привет)" au tour 1 exact ──
+    is_first_msg = (turn == 1)
+    if not (is_first_msg and reply.strip() == "привет)"):
+        reply = reply.replace(")", "")
+
+    # Comptabilise понятно après validation finale
+    if re.search(r"понятно", reply, re.IGNORECASE):
+        _poniatno_count[user_id] = _poniatno_count.get(user_id, 0) + 1
+    if "😏" in reply:
+        _smirk_last[user_id] = turn
+
     histories[user_id].append({"role": "assistant", "content": reply})
     # La sauvegarde est faite par l'appelant async via save_histories_async()
 
-    tokens = response.usage.total_tokens
+    tokens = response.usage.input_tokens + response.usage.output_tokens
     log("OK ", f"Reponse generee ({tokens} tokens, tour {turn})", f"user={username}")
     return reply
 
@@ -323,25 +709,62 @@ async def transcribe_voice(message) -> str | None:
     Télécharge un vocal Telegram et le transcrit via OpenAI Whisper.
     Retourne le texte transcrit, ou None si échec.
     """
-    buf = io.BytesIO()
-    await message.download_media(file=buf)
-    buf.seek(0)
-    buf.name = "voice.ogg"  # Whisper a besoin d'une extension reconnue
+    # Anthropic n'a pas de STT — transcription vocale désactivée
+    log("WRN", "Transcription vocale non disponible (Anthropic)", "")
+    return None
+
+# ─── Vision : analyse photos reçues ─────────────────────────
+
+async def describe_photo(message) -> str:
+    """
+    Télécharge une photo Telegram et demande à GPT-4o de la décrire
+    brièvement en russe, du point de vue d'Eva qui la reçoit.
+    Retourne une description courte, ou '[фото]' en cas d'échec.
+    """
     try:
-        result = client_openai.audio.transcriptions.create(
-            model="whisper-1",
-            file=buf,
+        buf = io.BytesIO()
+        await message.download_media(file=buf)
+        buf.seek(0)
+        b64 = base64.b64encode(buf.read()).decode("utf-8")
+        resp = client_anthropic.messages.create(
+            model="claude-haiku-4-5-20251001",
+            max_tokens=60,
+            messages=[{
+                "role": "user",
+                "content": [
+                    {
+                        "type": "image",
+                        "source": {
+                            "type": "base64",
+                            "media_type": "image/jpeg",
+                            "data": b64,
+                        }
+                    },
+                    {
+                        "type": "text",
+                        "text": (
+                            "Décris cette photo en 1 courte phrase en russe minuscule, "
+                            "comme si tu la recevais d'un inconnu sur une app de rencontres. "
+                            "Juste ce que tu vois factuellement. Pas de jugement, pas d'analyse. "
+                            "Exemple: 'парень на фоне машины' / 'закат на берегу' / 'селфи в зеркале'"
+                        )
+                    }
+                ]
+            }]
         )
-        return result.text.strip() or None
+        desc = resp.content[0].text.strip()
+        log("IMG", f"Vision GPT: {desc[:60]}")
+        return f"[фото: {desc}]"
     except Exception as e:
-        log("ERR", "Transcription Whisper echouee", str(e))
-        return None
+        log("ERR", f"Vision GPT echec: {e}")
+        return "[фото]"
+
 
 # ─── Logique vocaux ───────────────────────────────────────────
 
 # Mots-clés qui déclenchent un vocal en réponse directe
 _VOICE_REQUEST_RE = re.compile(
-    r"голосов[оаое]|запиши|скинь голос|пришли голос|голосом|войс|voice|запишешь",
+    r"голосов[оаое]|запиши|скинь голос|пришли голос|голосом|войс|voice|запишешь|кружок|кружочек",
     re.IGNORECASE,
 )
 
@@ -349,85 +772,151 @@ def user_wants_voice(text: str) -> bool:
     """L'utilisateur demande explicitement un message vocal."""
     return bool(_VOICE_REQUEST_RE.search(text))
 
-_TTS_ENABLED = bool(os.getenv("ZVUKOGRAM_TOKEN") and os.getenv("ZVUKOGRAM_EMAIL"))
+# Mots-clés vidéo/photo de soi (russe + français)
+_VIDEO_REQUEST_RE = re.compile(
+    # Russe — vidéo
+    r"скинь\s*вид[её]|пришли\s*вид[её]|покажи\s*(себ[яе]|вид[её])|вид[её](о|ос|осик|ео)?\s*(от\s*тебя|свое|пришли|скинь)"
+    r"|запишись|покажись|хочу\s*(тебя\s*)?(увидеть|видеть)|снимись"
+    # Russe — photo
+    r"|скинь\s*фот|пришли\s*фот|покажи\s*(себ[яе]|фот)|фотк|фоточк"
+    # Français — photo/vidéo
+    r"|montre.*(toi|photo|vid[eé]o)|envoie.*(photo|vid[eé]o|toi)"
+    r"|photo\s*de\s*toi|vid[eé]o\s*de\s*toi|te\s*voir|voir\s*(toi|une\s*photo)"
+    r"|t'as\s*(une\s*)?photo|montres?\s*toi"
+    r"|renvoi[es]?\s*(la\s*)?(vid[eé]o|photo)?|envoie\s*(encore|de\s*nouveau)",
+    re.IGNORECASE,
+)
 
-def should_send_voice(user_id: str, incoming_text: str, turn: int) -> bool:
+def user_wants_video(text: str) -> bool:
+    """L'utilisateur demande une vidéo d'Eva."""
+    return bool(_VIDEO_REQUEST_RE.search(text))
+
+async def send_eva_video(bot: TelegramClient, chat_id: int, user_id: str) -> bool:
     """
-    Décide si Eva envoie un vocal plutôt qu'un texte.
-    Désactivé si ZVUKOGRAM_TOKEN/EMAIL manquants.
+    Envoie la vidéo d'Eva. Maximum 1 fois par conversation.
+    Retourne True si envoyée, False sinon.
     """
-    if not _TTS_ENABLED:
+    if not _VIDEO_PATH.exists():
+        log("WRN", "Vidéo introuvable", str(_VIDEO_PATH))
         return False
-    if user_id in voice_sent_users:
+    if user_id in _video_sent_users:
         return False
-    if user_wants_voice(incoming_text):
+    try:
+        await bot.send_file(chat_id, str(_VIDEO_PATH))
+        _video_sent_users.add(user_id)
+        # Inject dans l'historique pour que Claude sache qu'une vidéo vient d'être envoyée
+        if user_id in histories:
+            histories[user_id].append({"role": "assistant", "content": "[отправила видео]"})
+        log("VID", f"Vidéo envoyée", f"user={user_id}")
         return True
-    if turn >= 4 and random.random() < VOICE_SPONTANEOUS_PROB:
-        return True
-    return False
+    except Exception as e:
+        log("ERR", f"Envoi vidéo échoué: {e}")
+        return False
+
+_TTS_ENABLED = bool(os.getenv("ZVUKOGRAM_TOKEN") and os.getenv("ZVUKOGRAM_EMAIL"))
+# Catalogue local (73 MP3s) — disponible même sans token TTS
+_CATALOG_ENABLED = Path("voice_catalog.json").exists()
+
+# Vocaux déjà envoyés par user : user_id → set de filenames
+_user_voice_history: dict[str, set[str]] = {}
+
+def pick_voice_for_user(reply_text: str, user_text: str, user_id: str) -> "dict | None":
+    """
+    Cherche un vocal pertinent non encore envoyé à ce user.
+    Retourne l'entrée catalogue ou None.
+    """
+    if not VOICE_ENABLED or not _CATALOG_ENABLED:
+        return None
+    from zvukogram_agent import pick_voice_for
+    already_sent = _user_voice_history.get(user_id, set())
+    entry = pick_voice_for(reply_text, user_text=user_text, fallback=False,
+                           exclude=already_sent)
+    return entry
 
 async def send_voice(bot: TelegramClient, chat_id: int, user_id: str,
-                     reply_text: str, name: str, username: str) -> tuple[bool, str]:
+                     name: str, username: str,
+                     entry: dict) -> tuple[bool, str]:
     """
-    Sélectionne (catalogue ou TTS) et envoie un message vocal.
+    Envoie un vocal depuis une entrée catalogue.
     Simule l'action "enregistrement audio" dans Telegram.
     Retourne (succès, transcript_utilisé).
     """
-    agent = get_voice_agent()
+    path = Path(entry["file"])
+    if not path.exists():
+        log("WRN", f"Fichier vocal introuvable: {entry['file']}")
+        return False, ""
 
-    async with bot.action(chat_id, "record_audio"):
-        audio_buf, transcript = await agent.generate(reply_text)
+    transcript = entry.get("transcript", "")
+    buf = __import__("io").BytesIO(path.read_bytes())
+    buf.name = "voice.mp3"
 
-        # Durée réaliste d'enregistrement basée sur le transcript
-        text_used = transcript or reply_text
-        record_dur = max(2.5, len(text_used) * 0.055) + random.uniform(0.3, 1.5)
-        log("VOX", f"Simulation enregistrement {record_dur:.1f}s", f"user={username}")
+    # Durée réaliste d'enregistrement basée sur le transcript
+    record_dur = max(2.5, len(transcript) * 0.055) + random.uniform(0.3, 1.5)
+    log("VOX", f"Simulation enregistrement {record_dur:.1f}s", f"user={username}")
+
+    async with bot.action(chat_id, SendMessageRecordAudioAction()):
         await asyncio.sleep(record_dur)
 
-    if audio_buf:
-        await bot.send_file(chat_id, audio_buf, voice_note=True)
-        voice_sent_users.add(user_id)
-        log("OUT", f"VOCAL ENVOYE a {name} (@{username})", f'"{(transcript or reply_text)[:50]}"')
-        return True, transcript or reply_text
-    else:
-        log("WRN", "Generation vocale echouee — fallback texte", f"user={username}")
-        return False, reply_text
+    await bot.send_file(chat_id, buf, voice_note=True)
+
+    # Marque comme envoyé pour ce user
+    _user_voice_history.setdefault(user_id, set()).add(entry["filename"])
+
+    log("OUT", f"VOCAL ENVOYE a {name} (@{username})", f'"{transcript[:60]}"')
+    return True, transcript
 
 # ─── Délai humain ─────────────────────────────────────────────
 
-async def human_delay(received_text: str, reply_text: str, user_id: str = ""):
+async def human_think_delay(received_text: str, user_id: str = "") -> None:
     """
-    Délai adaptatif :
-    - Si l'utilisateur écrit vite (< 30s depuis son dernier message) → 30-55s
-    - Sinon → 75-120s
+    Simule le comportement humain complet avant de répondre :
+    1. Reste OFFLINE pendant toute la réflexion (analyse du message)
+    2. Passe ONLINE à un moment naturel (elle ouvre l'appli)
+    3. Reste online le temps de "lire" le message (proportionnel à sa longueur)
+    4. Retour → le handler lance le typing immédiatement après
     """
-    words_in  = len(received_text.split())
-    words_out = len(reply_text.split())
+    chars    = len(received_text.strip())
+    words_in = len(received_text.split())
 
-    read_time  = words_in  * 0.6
-    think_time = random.uniform(2.0, 8.0)
-    type_time  = words_out * 0.9
-    total = read_time + think_time + type_time
-
-    # Détection d'un utilisateur actif (écrit rapidement)
     now  = _time.time()
     last = last_message_time.get(user_id, 0)
-    active = user_id and (now - last) < 30
+    gap  = (now - last) if last > 0 else 999.0
+    rapid_exchange = gap < 20  # échange en cours (dernier message < 20s)
 
-    if active:
-        total = min(max(total, 30.0), 55.0)
-        log("DLY", f"Delai rapide {total:.1f}s (actif)", f"user={user_id}")
+    # ── Délai de réflexion offline (proportionnel à longueur + contexte) ──
+    if chars <= 20 and rapid_exchange:
+        think = random.uniform(2.0, 8.0)
+        label = "express"
+    elif chars <= 20:
+        think = random.uniform(10.0, 25.0)
+        label = "courte"
+    elif chars <= 80 and rapid_exchange:
+        think = random.uniform(8.0, 22.0)
+        label = "moyenne (actif)"
+    elif chars <= 80:
+        think = random.uniform(25.0, 50.0)
+        label = "moyenne"
     else:
-        total = min(max(total, 75.0), 120.0)
+        think = random.uniform(40.0, 85.0)
         if random.random() < 0.15:
-            extra = random.uniform(10.0, 30.0)
-            total += extra
-            log("DLY", f"Pause longue {total:.0f}s (occupee)", f"user en attente")
-        else:
-            log("DLY", f"Delai {total:.1f}s",
-                f"(lu:{read_time:.1f} reflechi:{think_time:.1f} frappe:{type_time:.1f})")
+            think += random.uniform(15.0, 30.0)
+        label = "longue"
 
-    await asyncio.sleep(total)
+    log("DLY", f"Reflexion {label} {think:.1f}s (offline)", f"user={user_id}")
+
+    # Reste offline pendant toute la réflexion
+    await asyncio.sleep(think)
+
+    # ── Passe online (elle ouvre l'appli) ──
+    await go_online()
+
+    # ── Temps de lecture online — proportionnel à la longueur du message ──
+    # Elle lit le message sans encore taper
+    read_online = max(1.2, words_in * 0.45) + random.uniform(0.5, 2.5)
+    log("DLY", f"Lecture en ligne {read_online:.1f}s", f"user={user_id}")
+    await asyncio.sleep(read_online)
+
+    # → Retour au handler qui lance le typing
 
 # ─── Bot Telegram ─────────────────────────────────────────────
 
@@ -521,15 +1010,22 @@ async def handle_message(event):
             text = f"[стикер {emoji}]"
             log("STK", f"Sticker recu de {name} (@{username})", f"emoji={emoji}")
         elif event.message.photo:
-            text = "[фото]"
             log("IMG", f"Photo recue de {name} (@{username})")
+            text = await describe_photo(event.message)
         elif event.message.gif or event.message.video:
             text = "[видео/гиф]"
             log("VID", f"Video/GIF recu de {name} (@{username})")
         else:
             return
 
+    # ── Ignorer les messages catch_up (avant le démarrage) ──
+    msg_ts = event.message.date.timestamp() if event.message.date else 0
+    if msg_ts < BOT_START_TIME - 5:
+        return  # message antérieur au démarrage — traité par recover_unanswered si besoin
+
     log("IN ", f"RECU de {name} (@{username})", f'"{text}"')
+    # Repasse immédiatement offline — Telethon se met online auto à chaque message reçu
+    asyncio.create_task(go_offline())
 
     last_message_time[user_id] = _time.time()
 
@@ -545,46 +1041,91 @@ async def handle_message(event):
     user_locks[user_id] = True
     try:
         while True:
-            # ── Génération réponse texte ──
+            # ── Phase 1 : attente de réflexion (AVANT génération) ──
+            # Pendant ce temps, les messages accumulés sont collectés
+            await human_think_delay(text, user_id)
+
+            # ── Collecte des messages arrivés pendant l'attente ──
+            hist_now = histories.get(user_id, [])
+            pending_during_wait = []
+            while hist_now and hist_now[-1]["role"] == "user":
+                pending_during_wait.insert(0, hist_now.pop()["content"])
+            if pending_during_wait:
+                log("ACC", f"{len(pending_during_wait)} msg(s) integres avant generation",
+                    f"user={username}")
+                text = text + "\n" + "\n".join(pending_during_wait)
+
+            # ── Phase 2 : génération réponse (avec tout le contexte à jour) ──
             reply = get_eva_response(user_id, username, text)
             turn  = len(histories[user_id]) // 2
 
-            # ── Délai humain adaptatif ──
-            await human_delay(text, reply, user_id)
+            # ── Cooldown anti-burst : délai minimum entre deux envois au même user ──
+            since_last = _time.time() - _last_sent_to.get(user_id, 0)
+            if since_last < SEND_COOLDOWN_MIN:
+                extra_wait = SEND_COOLDOWN_MIN - since_last
+                log("DLY", f"Cooldown anti-burst {extra_wait:.0f}s", f"user={username}")
+                await asyncio.sleep(extra_wait)
 
             # ── Décision : vocal ou texte ? ──
-            send_as_voice = should_send_voice(user_id, text, turn)
+            # Cherche un vocal pertinent non encore envoyé à ce user
+            voice_entry = pick_voice_for_user(reply, text, user_id)
 
-            if send_as_voice:
-                log("VOX", f"Eva envoie un vocal", f"user={username} tour={turn}")
+            if voice_entry:
+                log("VOX", f"Eva envoie un vocal", f"user={username} tour={turn} | {voice_entry.get('transcript','')[:40]}")
                 sent, actual_transcript = await send_voice(
-                    bot, event.chat_id, user_id, reply, name, username
+                    bot, event.chat_id, user_id, name, username,
+                    entry=voice_entry
                 )
                 if sent:
                     histories[user_id][-1] = {"role": "assistant", "content": actual_transcript}
                     await save_histories_async()
                 else:
-                    async with bot.action(event.chat_id, "typing"):
-                        await asyncio.sleep(random.uniform(0.8, 2.0))
-                    _bot_sent_mark(event.chat_id, reply)
-                    await event.respond(reply)
+                    parts = _split_message(reply)
+                    for i, part in enumerate(parts):
+                        part_dur = _typing_delay(part)
+                        async with bot.action(event.chat_id, "typing"):
+                            await asyncio.sleep(part_dur)
+                        _bot_sent_mark(event.chat_id, part)
+                        await event.respond(part)
+                        log("OUT", f"ENVOYE (fallback texte) a {name} (@{username})", f'"{part}"')
+                        if i < len(parts) - 1:
+                            hist_now = histories.get(user_id, [])
+                            if hist_now and hist_now[-1]["role"] == "user":
+                                log("SKP", f"Split interrompu — nouveaux msgs en attente", f"user={username}")
+                                break
+                            await asyncio.sleep(random.uniform(1.0, 2.5))
                     await save_histories_async()
-                    log("OUT", f"ENVOYE (fallback texte) a {name} (@{username})", f'"{reply}"')
             else:
-                # ── Envoi texte classique ──
-                async with bot.action(event.chat_id, "typing"):
-                    await asyncio.sleep(random.uniform(0.8, 2.0))
-                _bot_sent_mark(event.chat_id, reply)
-                await event.respond(reply)
-                await save_histories_async()
-                log("OUT", f"ENVOYE a {name} (@{username})", f'"{reply}"')
+                # ── Vidéo d'Eva si demandée ──
+                if user_wants_video(text) and user_id not in _video_sent_users:
+                    await send_eva_video(bot, event.chat_id, user_id)
+                    await asyncio.sleep(random.uniform(1.5, 3.0))
 
+                # ── Envoi texte classique — avec découpage multi-messages si long ──
+                parts = _split_message(reply)
+                for i, part in enumerate(parts):
+                    part_dur = _typing_delay(part)
+                    async with bot.action(event.chat_id, "typing"):
+                        await asyncio.sleep(part_dur)
+                    _bot_sent_mark(event.chat_id, part)
+                    await event.respond(part)
+                    log("OUT", f"ENVOYE a {name} (@{username})", f'"{part}"')
+                    if i < len(parts) - 1:
+                        hist_now = histories.get(user_id, [])
+                        if hist_now and hist_now[-1]["role"] == "user":
+                            log("SKP", f"Split interrompu — nouveaux msgs en attente", f"user={username}")
+                            break
+                        await asyncio.sleep(random.uniform(1.0, 2.5))
+                await save_histories_async()
+
+            _last_sent_to[user_id] = _time.time()
             log("---", "-" * 55)
 
-            # ── Check messages accumulés pendant le délai ──
-            # On pop TOUS les messages user en attente pour les batcher en un seul appel GPT.
-            # Avant : seul le dernier était traité → les autres restaient dans l'historique
-            # sans réponse et causaient des doublons de réponse identique.
+            # Repasse offline après un délai naturel (30s–3min)
+            asyncio.create_task(_delayed_offline(random.uniform(30.0, 180.0)))
+
+            # ── Check messages accumulés pendant l'ENVOI ──
+            # Si d'autres messages sont arrivés pendant la génération/envoi, on les batche.
             hist = histories.get(user_id, [])
             pending = []
             while hist and hist[-1]["role"] == "user":
@@ -619,6 +1160,11 @@ _leo_last_like_time: float = 0.0
 _leo_last_action_time: float = 0.0  # timestamp de la dernière action envoyée à Leo
 _leo_pause_until: float = 0.0  # chargé depuis leo_pause.json au démarrage
 
+# Détection de boucle : liste des (texte_vu, timestamp) pour les checks watchdog
+_leo_loop_history: list[tuple[str, float]] = []
+_LEO_LOOP_WINDOW = 180.0   # 3 minutes
+_LEO_LOOP_MAX    = 4       # 4 fois le même état = boucle
+
 # Villes acceptées pour le like (Londres + alentours)
 _LEO_ALLOWED_CITIES = {
     "лондон", "london", "richmond", "kingston", "wimbledon", "croydon",
@@ -628,6 +1174,30 @@ _LEO_ALLOWED_CITIES = {
     "waltham", "haringey", "enfield", "barnet", "harrow", "brent", "ealing",
     "hounslow", "hillingdon", "hertfordshire", "surrey", "kent", "essex",
 }
+
+def _leo_detect_loop(text: str) -> bool:
+    """
+    Détecte une boucle infinie : même texte vu _LEO_LOOP_MAX fois en _LEO_LOOP_WINDOW s.
+    Retourne True si boucle détectée (→ pause immédiate).
+    """
+    global _leo_loop_history, _leo_pause_until
+    now = _time.time()
+    # Purge anciens
+    _leo_loop_history = [(t, ts) for t, ts in _leo_loop_history if now - ts < _LEO_LOOP_WINDOW]
+    # Ajoute entrée courante
+    key = text[:60].strip().lower()
+    _leo_loop_history.append((key, now))
+    # Compte occurrences du même texte
+    count = sum(1 for t, _ in _leo_loop_history if t == key)
+    if count >= _LEO_LOOP_MAX:
+        from datetime import datetime, timedelta
+        pause_end = now + 3600  # pause 1h
+        _leo_pause_until = pause_end
+        _leo_loop_history.clear()
+        log("LEO", f"BOUCLE DETECTEE ({count}x) — pause 1h", f"text={text[:40]}")
+        return True
+    return False
+
 
 def _leo_log(direction: str, text: str, btns: list):
     """Log complet de toutes les interactions LeoMatchBot pour analyse."""
@@ -717,7 +1287,7 @@ async def handle_leobot(event):
     Handler LeoMatchBot — une seule action à la fois via _leo_lock.
     Ignore les messages antérieurs au démarrage (catch_up).
     """
-    global _leo_last_like_time, _leo_last_action_time
+    global _leo_last_like_time, _leo_last_action_time, _leo_pause_until
 
     # ── Ignorer les messages catch_up (avant le démarrage du bot) ──
     msg_ts = event.message.date.timestamp() if event.message.date else 0
@@ -731,8 +1301,20 @@ async def handle_leobot(event):
     if not btns and not text:
         return
 
-    # ── Pause temporaire ──
+    # ── Pause temporaire (relit le fichier à chaque appel) ──
+    try:
+        if os.path.exists("leo_pause.json"):
+            with open("leo_pause.json", "r") as _pf:
+                _disk = json.load(_pf).get("until", 0)
+                if _disk > _leo_pause_until:
+                    _leo_pause_until = _disk
+    except Exception:
+        pass
     if _leo_pause_until and _time.time() < _leo_pause_until:
+        return
+
+    # ── Détection de boucle ──
+    if _leo_detect_loop(text):
         return
 
     # ── Une seule action à la fois ──
@@ -741,52 +1323,84 @@ async def handle_leobot(event):
         return
 
     async with _leo_lock:
-        await asyncio.sleep(random.uniform(2.0, 5.0))
+        await asyncio.sleep(random.uniform(2.0, 4.0))
 
-        # ── Profil → like ou skip (logique hardcodée, plus fiable que GPT) ──
-        if "❤️" in btns and ("👎" in btns or "💤" in btns):
-            name = text.split(",")[0].strip()[:25] if text else "photo"
-            if name.lower() in ("ева", "eva", "ieva"):
-                await bot.send_message(LEO_BOT_ID, "1")
-                _leo_log("out", "1", [])
-                log("LEO", "Mon propre profil — skip")
-            elif not _leo_is_london(text) and text:
-                await bot.send_message(LEO_BOT_ID, "👎")
-                _leo_log("out", "👎", [])
-                log("LEO", f"Skip hors London", f"profil={name}")
-            elif _leo_can_like():
+        # ── 1. Erreur "Нет такого варианта ответа" → retour au menu (max 1 fois / 60s) ──
+        if "нет такого варианта" in text.lower():
+            if _leo_last_action_time and _time.time() - _leo_last_action_time < 60:
+                log("LEO", "Erreur loop — cooldown 60s actif, pause 10 min")
+                _leo_pause_until = _time.time() + 600
+                try:
+                    with open("leo_pause.json", "w") as _pf:
+                        json.dump({"until": _leo_pause_until}, _pf)
+                except Exception:
+                    pass
+                return
+            await bot.send_message(LEO_BOT_ID, "← Назад")
+            _leo_log("out", "← Назад", [])
+            _leo_last_action_time = _time.time()
+            log("LEO", "Erreur → retour menu")
+            return
+
+        # ── 2. Limite journalière → pause jusqu'à minuit ──
+        if "слишком много" in text.lower():
+            from datetime import datetime, timedelta
+            tomorrow = (datetime.now().replace(hour=0, minute=5, second=0) + timedelta(days=1))
+            _leo_pause_until = tomorrow.timestamp()
+            log("LEO", "Limite journaliere atteinte — pause jusqu'a minuit")
+            return
+
+        # ── 3. Menu principal (Смотреть анкеты présent) → "1" ──
+        if any("смотреть анкеты" in b.lower() for b in btns) or "смотреть анкеты" in text.lower():
+            await asyncio.sleep(random.uniform(1.0, 2.0))
+            await bot.send_message(LEO_BOT_ID, "1")
+            _leo_log("out", "1", [])
+            _leo_last_action_time = _time.time()
+            log("LEO", "Menu → Смотреть анкеты")
+            return
+
+        # ── 4. Profil affiché (bouton ❤️ inline OU texte "Nom, âge, Ville") → like ──
+        _is_profile = (
+            "❤️" in btns
+            or re.match(r"^[^\n]{1,40},\s*\d{1,2}[,\s]", text)
+        )
+        if _is_profile:
+            name = text.split(",")[0].strip()[:30] if text else "profil"
+            if _leo_can_like():
                 _leo_last_like_time = _time.time()
                 _leo_likes_this_hour.append(_leo_last_like_time)
                 await bot.send_message(LEO_BOT_ID, "❤️")
                 _leo_log("out", "❤️", [])
+                _leo_last_action_time = _time.time()
                 log("LEO", f"Like envoyé", f"profil={name}")
             else:
-                log("LEO", "Rate limit — skip")
-            _leo_last_action_time = _time.time()
+                log("LEO", "Rate limit atteint — skip like")
             return
 
-        # ── Tout le reste → GPT décide ──
-        action = await _gpt_leo_decide(text, btns)
-        if action:
-            await bot.send_message(LEO_BOT_ID, action)
-            _leo_log("out", action, [])
+        # ── 4. Écran inconnu avec "← Назад" → reculer ──
+        back_btns = [b for b in btns if "назад" in b.lower()]
+        if back_btns:
+            await bot.send_message(LEO_BOT_ID, back_btns[0])
+            _leo_log("out", back_btns[0], [])
             _leo_last_action_time = _time.time()
-            log("LEO", f"GPT → '{action}'", f"btns={btns[:2]}")
-        else:
-            log("LEO", f"Aucune action", f"text={text[:40]} btns={btns[:2]}")
+            log("LEO", f"Ecran inconnu — retour", f"btns={btns[:3]}")
+            return
+
+        log("LEO", f"Aucune action connue", f"text={text[:40]} btns={btns[:3]}")
 
 
-async def recover_unanswered():
+async def recover_unanswered(max_age_seconds: float = 48 * 3600):
     """
     Au démarrage, répond aux messages restés sans réponse.
     Ne se fie pas à unread_count (Telegram peut auto-lire).
     Scanne toutes les conversations privées où le dernier message est entrant
     et où aucune réponse n'a été envoyée depuis ce message.
+    max_age_seconds: ignorer les messages plus vieux que ça (15 min au démarrage, 48h en périodique)
     """
     await asyncio.sleep(5.0)
     log("RCV", "Scan des conversations non-repondues...")
     recovered = 0
-    cutoff = _time.time() - 48 * 3600  # fenêtre de 48h
+    cutoff = _time.time() - max_age_seconds
     try:
         async for dialog in bot.iter_dialogs():
             if not dialog.is_user:
@@ -827,15 +1441,6 @@ async def recover_unanswered():
             if already_replied:
                 continue
 
-            # Éviter les doublons si une réponse sortante est très récente (< 120s)
-            recent_out = any(
-                m.out and (_time.time() - m.date.timestamp()) < 120
-                for m in last_msgs[1:]
-            )
-            if recent_out:
-                log("RCV", f"Skip doublon recent — {name} (@{username})")
-                continue
-
             # Extraire le texte ou un placeholder pour les médias
             msg0 = last_msgs[0]
             if msg0.text:
@@ -847,7 +1452,7 @@ async def recover_unanswered():
             elif getattr(msg0, "sticker", None):
                 text = f"[стикер {getattr(msg0.sticker, 'alt', '') or ''}]".strip()
             elif getattr(msg0, "photo", None):
-                text = "[фото]"
+                text = await describe_photo(msg0)
             elif getattr(msg0, "gif", None) or getattr(msg0, "video", None):
                 text = "[видео/гиф]"
             else:
@@ -862,8 +1467,12 @@ async def recover_unanswered():
             user_locks[user_id] = True
             try:
                 reply = get_eva_response(user_id, username, text)
+                # Envoi vidéo si demandée
+                if user_wants_video(text) and user_id not in _video_sent_users:
+                    await send_eva_video(bot, peer.id, user_id)
+                    await asyncio.sleep(random.uniform(1.5, 3.0))
                 async with bot.action(peer.id, "typing"):
-                    await asyncio.sleep(random.uniform(1.0, 2.5))
+                    await asyncio.sleep(_typing_delay(reply))
                 _bot_sent_mark(peer.id, reply)
                 await bot.send_message(peer.id, reply)
                 await save_histories_async()
@@ -890,48 +1499,174 @@ async def periodic_recover():
         log("RCV", "Scan periodique des conversations non-repondues...")
         await recover_unanswered()
 
+async def _leo_react_to_last():
+    """
+    Lit le dernier message de LeoMatchBot et réagit de manière cohérente.
+    Appelé par le watchdog périodiquement.
+    """
+    global _leo_last_action_time, _leo_pause_until
+    try:
+        msgs = await bot.get_messages(LEO_BOT_ID, limit=3)
+        if not msgs:
+            return
+        last = msgs[0]
+        # Ignorer si le dernier message est sortant (on vient d'agir)
+        if last.out:
+            return
+        # text ou caption (profils avec photo)
+        text = (last.text or getattr(last, "message", "") or "").strip()
+        if not text and hasattr(last, "photo") and last.photo:
+            # Photo sans texte = profil → liker directement
+            name = "profil photo"
+            async with _leo_lock:
+                if _leo_can_like():
+                    _leo_last_like_time = _time.time()
+                    _leo_likes_this_hour.append(_leo_last_like_time)
+                    await bot.send_message(LEO_BOT_ID, "❤️")
+                    _leo_last_action_time = _time.time()
+                    log("LEO", f"Watchdog: like profil photo")
+                else:
+                    log("LEO", "Watchdog: rate limit — skip photo")
+            return
+        btns = _get_buttons(last)
+        log("LEO", f"Watchdog check dernier msg", f"text={text[:50]} btns={btns[:3]}")
+
+        # ── Détection boucle : même état répété → pause 1h ──
+        if _leo_detect_loop(text):
+            return
+
+        async with _leo_lock:
+            await asyncio.sleep(random.uniform(2.0, 4.0))
+
+            # Erreur → ← Назад
+            if "нет такого варианта" in text.lower():
+                await bot.send_message(LEO_BOT_ID, "← Назад")
+                _leo_last_action_time = _time.time()
+                log("LEO", "Watchdog: erreur → retour menu")
+                return
+
+            # Menu → "1"
+            if any("смотреть анкеты" in b.lower() for b in btns) or "смотреть анкеты" in text.lower():
+                await bot.send_message(LEO_BOT_ID, "1")
+                _leo_last_action_time = _time.time()
+                log("LEO", "Watchdog: menu → Смотреть анкеты")
+                return
+
+            # Limite journalière Leo atteinte → pause jusqu'à minuit
+            if "слишком много" in text.lower() or ("главное меню" in [b.lower() for b in btns] and "слишком" in text.lower()):
+                from datetime import datetime, timedelta
+                tomorrow = (datetime.now().replace(hour=0, minute=5, second=0) + timedelta(days=1))
+                _leo_pause_until = tomorrow.timestamp()
+                log("LEO", "Watchdog: limite journaliere atteinte — pause jusqu'a minuit")
+                return
+
+            # Profil → ❤️ si bouton inline OU texte sans mots-clés de menu
+            _menu_keywords = ("смотреть анкеты", "моя анкета", "главное меню", "premium", "активируй", "я больше не хочу")
+            _looks_like_menu = any(k in text.lower() for k in _menu_keywords)
+            _is_profile = (
+                "❤️" in btns
+                or (text and not _looks_like_menu)
+            )
+            if _is_profile:
+                name = text.split(",")[0].strip()[:30] if text else "profil"
+                if _leo_can_like():
+                    _leo_last_like_time = _time.time()
+                    _leo_likes_this_hour.append(_leo_last_like_time)
+                    await bot.send_message(LEO_BOT_ID, "❤️")
+                    _leo_last_action_time = _time.time()
+                    log("LEO", f"Watchdog: like envoyé", f"profil={name}")
+                else:
+                    log("LEO", "Watchdog: rate limit — skip")
+                return
+
+            # Écran inconnu avec "← Назад"
+            back_btns = [b for b in btns if "назад" in b.lower()]
+            if back_btns:
+                await bot.send_message(LEO_BOT_ID, back_btns[0])
+                _leo_last_action_time = _time.time()
+                log("LEO", f"Watchdog: écran inconnu → retour")
+                return
+
+            # Inconnu → ne rien faire, on repassera au prochain tick
+            log("LEO", f"Watchdog: état non reconnu — attente", f"text={text[:40]} btns={btns[:3]}")
+
+    except Exception as e:
+        log("LEO", f"Erreur _leo_react_to_last: {e}")
+
+
 async def leo_start_browsing():
     """
-    Watchdog : envoie "1 🚀" uniquement si aucune action n'a eu lieu depuis 60s
-    et que le lock n'est pas actif. LeoMatchBot enchaîne les profils automatiquement
-    après chaque ❤️/👎 — la boucle ne sert qu'à relancer si idle.
+    Watchdog actif : toutes les 20s, lit le dernier message Leo et réagit.
+    Ne tire pas si le lock est actif ou si on est en pause.
     """
-    await asyncio.sleep(random.uniform(15.0, 25.0))  # délai initial
+    global _leo_last_action_time
+    await asyncio.sleep(random.uniform(10.0, 15.0))  # délai initial
     while True:
         try:
             if _leo_lock is None:
-                await asyncio.sleep(30.0)
+                await asyncio.sleep(15.0)
                 continue
             if _leo_pause_until and _time.time() < _leo_pause_until:
                 remaining = (_leo_pause_until - _time.time()) / 3600
                 log("LEO", f"Watchdog en pause — reprise dans {remaining:.1f}h")
                 await asyncio.sleep(300.0)
                 continue
-            idle = _time.time() - _leo_last_action_time > 60
-            if not _leo_lock.locked() and idle:
-                await bot.send_message(LEO_BOT_ID, "1 🚀")
-                log("LEO", "Watchdog — relance profil (idle 60s)")
-            # sinon : action récente ou lock actif → LeoMatchBot va envoyer le suivant
+            if not _leo_lock.locked():
+                await _leo_react_to_last()
         except Exception as e:
             log("LEO", f"Erreur watchdog: {e}")
-        await asyncio.sleep(30.0)
+        await asyncio.sleep(20.0)
 
 # ─── Entrée ───────────────────────────────────────────────────
+
+async def go_online():
+    """Passe en ligne brièvement."""
+    try:
+        await bot(UpdateStatusRequest(offline=False))
+    except Exception:
+        pass
+
+async def go_offline():
+    """Passe hors ligne."""
+    try:
+        await bot(UpdateStatusRequest(offline=True))
+    except Exception:
+        pass
+
+async def _delayed_offline(delay: float):
+    """Repasse offline après un délai."""
+    await asyncio.sleep(delay)
+    await go_offline()
+
+async def keep_offline():
+    """Repasse offline toutes les 20s — contre le comportement auto-online de Telethon."""
+    while True:
+        try:
+            await go_offline()
+        except Exception:
+            pass
+        await asyncio.sleep(20)
+
 
 async def main():
     load_histories()
 
-    log("BOT", "Demarrage Eva Bot...")
+    log("BOT", "Demarrage Alina Bot...")
     log("TEL", f"Numero : {PHONE}")
 
     # Vérifie si l'agent vocal est configuré
     zg_token = os.getenv("ZVUKOGRAM_TOKEN", "")
-    if not zg_token:
-        log("WRN", "ZVUKOGRAM_TOKEN absent — vocaux desactives")
-        log("WRN", "Crée un compte sur zvukogram.com et ajoute dans .env")
-    else:
-        log("VOX", f"Agent vocal actif — voix={os.getenv('ZVUKOGRAM_VOICE', 'Alena')} "
-                   f"prob_spontanee={VOICE_SPONTANEOUS_PROB:.0%}")
+    if _CATALOG_ENABLED:
+        from zvukogram_agent import _load_catalog
+        cat = _load_catalog()
+        log("VOX", f"Catalogue vocal actif — {len(cat)} fichiers locaux "
+                   f"(prob_spontanee={VOICE_SPONTANEOUS_PROB:.0%})")
+        if not zg_token:
+            log("VOX", "TTS zvukogram.com desactive (token absent) — catalogue seul")
+    elif not zg_token:
+        log("WRN", "ZVUKOGRAM_TOKEN absent et aucun catalogue — vocaux desactives")
+    if zg_token:
+        log("VOX", f"TTS actif — voix={os.getenv('ZVUKOGRAM_VOICE', 'Alena')}")
 
     def code_callback():
         code_file = "telegram_code.txt"
@@ -972,8 +1707,9 @@ async def main():
     log("RDY", "En attente de messages...\n")
 
     asyncio.create_task(leo_start_browsing())
-    asyncio.create_task(recover_unanswered())
+    asyncio.create_task(recover_unanswered(max_age_seconds=900))  # 15 min au démarrage — évite de répondre à des convos stales
     asyncio.create_task(periodic_recover())
+    asyncio.create_task(keep_offline())
 
     await bot.run_until_disconnected()
 

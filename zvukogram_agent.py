@@ -73,7 +73,7 @@ def _similarity(a: str, b: str) -> float:
 _CTX_CONFIRM  = re.compile(r"\bок\b|хорошо|договорились|согласна|ладно|давай|ага|угу|конечн|приду|буду там", re.I)
 _CTX_DENY     = re.compile(r"\bнет\b|не могу|не хочу|не буду|не получится|нельзя|пока нет|не сейчас", re.I)
 _CTX_GREET    = re.compile(r"привет|здравствуй|доброе утро|добрый вечер|добрый день|хай\b", re.I)
-_CTX_BYE      = re.compile(r"пока|до свидания|спокойной ночи|до завтра|до встречи|удачи тебе", re.I)
+_CTX_BYE      = re.compile(r"пока[\-\s]*пока|до свидания|спокойной ночи|до завтра|до встречи|удачи тебе|ну пока[\.!]?$|окей пока[\.!]?$|ладно пока[\.!]?$", re.I)
 _CTX_FLIRT    = re.compile(r"нравишься|хочу тебя|красивый|симпатичн|скучаю|влюбилась|милый|солнышко", re.I)
 _CTX_BUSY     = re.compile(r"занята|смотрю|гуляю|читаю|работаю|крашу|иду спать|устала|позже напишу", re.I)
 _CTX_REACTION = re.compile(r"интересно|странно|прикольно|не поняла|серьёзно|ничего себе|ой\b|вот это", re.I)
@@ -89,12 +89,23 @@ _TAG_POOLS = {
     "casual":   ["casual"],
 }
 
-# Vocaux à ne jamais envoyer de façon non sollicitée (trop sexuels / hors contexte)
+# Vocaux à ne jamais envoyer de façon non sollicitée (trop sexuels / hors contexte
+# ou réservés à des contextes spécifiques comme le post-lien)
 _NSFW_TRANSCRIPTS = {
-    "как тебе моя попа", "хочешь меня", "я тебя люблю",
-    "мм,какой большой хочу тебя", "а грудь нравится",
+    "как тебе моя попа", "хочешь меня?", "хочешь меня", "я тебя люблю",
+    "мм,какой большой хочу тебя", "м-м-м, какой большой, хочу тебя",
+    "а грудь нравится?", "а грудь нравится",
+    "и я тебя люблю",
+    "можешь мне парнушку посоветовать интересную",
     "женский голос стон", "женский звук уеееее ху",
     "женский голос восклицание", "женский голос возглас",
+    # Réservés post-lien uniquement — ne pas envoyer comme remplacement générique
+    "договорились", "до завтра",
+    # Clips "au revoir" — trop sensibles au contexte, jamais automatiques
+    # (score peut exploser à 1.47+ à cause du word-boost sur "пока")
+    "пока-пока", "чмоки-чмоки", "спокойной ночи", "сладких снов",
+    # Vocaux à forte valeur sémantique — trop spécifiques, faux positifs fréquents
+    "можешь фильм посоветовать", "можешь мне парнушку посоветовать интересную",
 }
 
 def _detect_context(eva_text: str, user_text: str = "") -> str:
@@ -111,12 +122,13 @@ def _detect_context(eva_text: str, user_text: str = "") -> str:
 
 
 def pick_voice_for(text: str, user_text: str = "", fallback: bool = True,
-                   exclude: set | None = None) -> dict | None:
+                   exclude: set | None = None, min_score: float = 0.68) -> dict | None:
     """
     Sélectionne le meilleur vocal pour ce message.
     1. Essaie une correspondance exacte/fuzzy sur le transcript.
     2. Si aucun match satisfaisant ET fallback=True → sélection par contexte.
     exclude : set de filenames déjà envoyés à ce user (jamais répéter).
+    min_score : seuil minimum (défaut 0.68 — assez élevé pour éviter les faux positifs).
     """
     import random as _random
     catalog = _load_catalog()
@@ -143,12 +155,20 @@ def pick_voice_for(text: str, user_text: str = "", fallback: bool = True,
             if tag in text_lower:
                 score += 0.15
 
+        # Boost pour les transcripts courts (≤3 mots) : si le mot-clé est présent
+        # Limité aux mots de ≥4 lettres pour éviter que "нет", "да", "ну" matchent n'importe quoi
+        transcript_words = re.findall(r'\w+', transcript)
+        if len(transcript_words) <= 3:
+            for word in transcript_words:
+                if len(word) >= 4 and word in text_lower:
+                    score += 0.30
+
         if score > best_score:
             best_score = score
             best_entry = entry
 
-    # Seuil : 0.10 — mais jamais NSFW sans demande explicite
-    if best_score >= 0.10 and best_entry:
+    # Seuil configurable (défaut 0.68) — en dessous le match est trop flou/hors-sujet
+    if best_score >= min_score and best_entry:
         transcript_low = best_entry.get("transcript", "").lower()
         if transcript_low not in _NSFW_TRANSCRIPTS:
             log("VOX", f"Match transcript (score={best_score:.2f})", best_entry.get("transcript", ""))
@@ -161,7 +181,14 @@ def pick_voice_for(text: str, user_text: str = "", fallback: bool = True,
         return None
 
     context = _detect_context(text, user_text)
-    target_tags = _TAG_POOLS.get(context, ["casual"])
+
+    # Pas de fallback sur "casual" — trop vague, risque de vocaux hors-sujet
+    if context == "casual":
+        return None
+
+    target_tags = _TAG_POOLS.get(context, [])
+    if not target_tags:
+        return None
 
     # Pool filtrée : bonne catégorie + pas NSFW + pas déjà envoyé
     safe = [
@@ -171,13 +198,7 @@ def pick_voice_for(text: str, user_text: str = "", fallback: bool = True,
         and e.get("filename") not in exclude
     ]
     if not safe:
-        safe = [
-            e for e in catalog
-            if e.get("transcript", "").lower() not in _NSFW_TRANSCRIPTS
-            and e.get("filename") not in exclude
-        ]
-    if not safe:
-        return None  # tous les vocaux ont déjà été envoyés
+        return None
 
     choice = _random.choice(safe)
     log("VOX", f"Fallback contextuel (ctx={context})", choice.get("transcript", ""))

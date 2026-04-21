@@ -5,10 +5,41 @@ __pycache__/
 .DS_Store
 *.session
 *.session-journal
-histories.json
+voices/
+
+# Logs
+*.log
 bot_new.log
+
+# Runtime state — jamais sur git
+histories.json
+histories_wa.json
+histories_ieva_backup.json
+ab_test.json
+tracking.json
+wa_blocked.json
+wa_closer_lock.json
+wa_manual_pause.json
+wa_retry_queue.json
+wa_last_processed.json
+closer_lock.json
+manual_pause.json
+cold_reengagement.json
+link_followup.json
 eva_bot.lock
 leo_conversation.jsonl
 leo_pause.json
+kill_lock.json
+
+# Executables & tunnels
+*.exe
+cloudflared.log
+wa_qr.png
+wa_qr.txt
+
+# Vidéos
+*.mp4
+
+# Divers
 zvuko_page.html
-voices/
+vocaux_conv/

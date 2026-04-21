@@ -89,6 +89,12 @@ def _release_instance_lock():
 
 _acquire_instance_lock()
 
+# ─── Persistent data directory ─────────────────────────────────
+# Railway : créer un volume et définir DATA_DIR=/data dans les env vars
+# Local Windows : utilise le répertoire du script par défaut
+DATA_DIR = Path(os.getenv("DATA_DIR", Path(__file__).parent))
+DATA_DIR.mkdir(parents=True, exist_ok=True)
+
 # ─── Config ───────────────────────────────────────────────────
 API_ID   = int(os.getenv("TELEGRAM_API_ID"))
 API_HASH = os.getenv("TELEGRAM_API_HASH")
@@ -118,7 +124,7 @@ client_anthropic = anthropic.Anthropic(
 )
 
 histories    = {}
-HISTORY_FILE = "histories.json"
+HISTORY_FILE = str(DATA_DIR / "histories.json")
 
 # Utilisateurs bloqués — Eva ne leur répond pas
 BLOCKED_USERS = {"623346108", "563188623", "5653565646", "7497658207", "784708739", "1298399032", "7615670279", "696518838"}  # СОВЕТСКИЙ (@mkaafromspai), Vadim (@Sakaliuk01), Дима (@dddimacta), basbikb (@basbikb), Vadim (@VadimTP), Герман (@MemoryLe4k), ArsenChik (@ssskam009), danchizis (@danchizis)
@@ -143,7 +149,7 @@ SEND_COOLDOWN_MIN = 45.0  # secondes minimum entre deux envois au même user
 _link_followup_scheduled: set[str] = set()
 
 # ── Cold re-engagement ──
-_COLD_FILE = Path("cold_reengagement.json")
+_COLD_FILE = DATA_DIR / "cold_reengagement.json"
 _COLD_MSGS = {
     "ru": ["ты куда пропал?", "всё нормально?", "ты там?", "пропал куда-то"],
     "fr": ["t'as disparu ?", "tout va bien ?", "t'es là ?", "tu as disparu"],
@@ -151,7 +157,7 @@ _COLD_MSGS = {
 }
 
 # ── A/B test première ouverture ──
-_AB_FILE = Path("ab_test.json")
+_AB_FILE = DATA_DIR / "ab_test.json"
 
 # Engagement scoring — intervalles de réponse par user (pour adapter le moment de conversion)
 _user_response_gaps: dict[str, list[float]] = {}
@@ -2170,11 +2176,11 @@ _CO_WRITE_TIMEOUT = 30.0  # secondes sans draft event → verrou levé automatiq
 # maps user_id (str) → timestamp de reprise (time.time() + durée)
 _manual_pause: dict[str, float] = {}
 _MANUAL_PAUSE_SECONDS = 300.0  # 5 minutes par message envoyé
-_MANUAL_PAUSE_FILE = Path(__file__).parent / "manual_pause.json"
+_MANUAL_PAUSE_FILE = DATA_DIR / "manual_pause.json"
 
 # ── Verrou closer : // dans une conv → bot bloqué jusqu'au prochain // ──
 _closer_lock: set[str] = set()
-_CLOSER_LOCK_FILE = Path(__file__).parent / "closer_lock.json"
+_CLOSER_LOCK_FILE = DATA_DIR / "closer_lock.json"
 
 def _save_closer_lock():
     try:
@@ -2759,7 +2765,7 @@ async def handle_message(event):
 # ─── LeoMatchBot automation ───────────────────────────────────
 
 LEO_BOT_ID = 1234060895
-LEO_LOG_FILE = "leo_conversation.jsonl"
+LEO_LOG_FILE = str(DATA_DIR / "leo_conversation.jsonl")
 
 _leo_lock = None          # asyncio.Lock() créé dans main()
 _leo_start_time: float = 0.0  # défini dans main() après connexion — ignore les catch_up avant
@@ -2769,6 +2775,7 @@ _LEO_RATE_LIMIT = 120            # sécurité taux horaire absolu
 _leo_last_like_time: float = 0.0
 _leo_last_action_time: float = 0.0  # timestamp de la dernière action envoyée à Leo
 _leo_pause_until: float = 0.0    # chargé depuis leo_pause.json au démarrage
+_LEO_PAUSE_FILE = str(DATA_DIR / _LEO_PAUSE_FILE)
 
 # ── Session burst (30 likes en 6-12s, puis pause 30 min) ──
 _leo_session_likes: int = 0
@@ -2862,7 +2869,7 @@ def _leo_session_end():
     _leo_session_likes = 0
     log("LEO", f"Session terminée ({_leo_session_max} actions) — pause 30 min")
     try:
-        with open("leo_pause.json", "w") as _pf:
+        with open(_LEO_PAUSE_FILE, "w") as _pf:
             json.dump({"until": _leo_pause_until}, _pf)
     except Exception:
         pass
@@ -2942,8 +2949,8 @@ async def handle_leobot(event):
 
     # ── Pause temporaire (relit le fichier à chaque appel) ──
     try:
-        if os.path.exists("leo_pause.json"):
-            with open("leo_pause.json", "r") as _pf:
+        if os.path.exists(_LEO_PAUSE_FILE):
+            with open(_LEO_PAUSE_FILE, "r") as _pf:
                 _disk = json.load(_pf).get("until", 0)
                 if _disk > _leo_pause_until:
                     _leo_pause_until = _disk
@@ -2970,7 +2977,7 @@ async def handle_leobot(event):
                 log("LEO", "Erreur loop — cooldown 60s actif, pause 10 min")
                 _leo_pause_until = _time.time() + 600
                 try:
-                    with open("leo_pause.json", "w") as _pf:
+                    with open(_LEO_PAUSE_FILE, "w") as _pf:
                         json.dump({"until": _leo_pause_until}, _pf)
                 except Exception:
                     pass
@@ -3042,7 +3049,7 @@ async def _click_no_purchase_check(bot_client: TelegramClient):
     Entre 10 et 30 min après le clic → envoie un message de relance immédiate.
     """
     await asyncio.sleep(120)  # délai initial 2 min
-    _TRK = Path("tracking.json")
+    _TRK = DATA_DIR / "tracking.json"
     while True:
         try:
             if _TRK.exists():
@@ -3207,7 +3214,7 @@ async def _cold_reengagement_check(bot_client: TelegramClient):
         await asyncio.sleep(7200)  # 2h entre chaque scan
 
 
-_LAST_SEEN_PATH = Path(__file__).parent / "last_seen.json"
+_LAST_SEEN_PATH = DATA_DIR / "last_seen.json"
 
 def _save_last_seen():
     """Sauvegarde le timestamp d'arrêt du bot pour le recovery au redémarrage."""
@@ -3484,7 +3491,7 @@ async def periodic_recover():
         log("RCV", "Scan periodique des conversations non-repondues...")
         await recover_unanswered()
 
-_VIDEO_TRIGGER_PATH = Path(__file__).parent / "video_trigger.json"
+_VIDEO_TRIGGER_PATH = DATA_DIR / "video_trigger.json"
 
 async def _check_video_trigger(bot: TelegramClient):
     """Vérifie toutes les 3s si un fichier video_trigger.json existe et envoie la vidéo ou un vocal."""
@@ -3681,7 +3688,7 @@ async def go_offline():
         pass
 
 # Fix 12 : follow-up persisté sur disque — résiste aux redémarrages
-_FOLLOWUP_FILE = Path("link_followup.json")
+_FOLLOWUP_FILE = DATA_DIR / "link_followup.json"
 
 _FOLLOWUP_MSGS = {
     "first": {
@@ -4129,8 +4136,8 @@ async def main():
     _leo_start_time = _time.time()
     # Charge la pause Leo depuis fichier (évite de modifier le code source)
     try:
-        if os.path.exists("leo_pause.json"):
-            with open("leo_pause.json", "r") as _pf:
+        if os.path.exists(_LEO_PAUSE_FILE):
+            with open(_LEO_PAUSE_FILE, "r") as _pf:
                 _leo_pause_until = float(json.load(_pf).get("until", 0))
             if _leo_pause_until > _time.time():
                 from datetime import datetime as _dt

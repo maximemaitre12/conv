@@ -13,7 +13,11 @@ import json
 import time as _time
 import io
 import atexit
-import msvcrt
+import platform as _platform
+if _platform.system() == "Windows":
+    import msvcrt as _filelock
+else:
+    import fcntl as _filelock
 import base64
 import traceback
 import subprocess
@@ -48,7 +52,11 @@ def _acquire_instance_lock():
     global _lock_fh
     _lock_fh = open(_LOCK_FILE, "w")
     try:
-        msvcrt.locking(_lock_fh.fileno(), msvcrt.LK_NBLCK, 1)
+        if _platform.system() == "Windows":
+            _filelock.locking(_lock_fh.fileno(), _filelock.LK_NBLCK, 1)
+        else:
+            import fcntl
+            fcntl.flock(_lock_fh.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
     except OSError:
         _lock_fh.close()
         print("[FATAL] Une autre instance du bot tourne déjà. Arrêt.", flush=True)
@@ -65,7 +73,11 @@ def _release_instance_lock():
     if _lock_fh:
         try:
             _lock_fh.seek(0)
-            msvcrt.locking(_lock_fh.fileno(), msvcrt.LK_UNLCK, 1)
+            if _platform.system() == "Windows":
+                _filelock.locking(_lock_fh.fileno(), _filelock.LK_UNLCK, 1)
+            else:
+                import fcntl
+                fcntl.flock(_lock_fh.fileno(), fcntl.LOCK_UN)
         except OSError:
             pass
         _lock_fh.close()

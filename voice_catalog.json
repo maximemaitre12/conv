@@ -1,470 +1,408 @@
 [
   {
-    "id": "45361",
+    "id": 45361,
     "filename": "45361.mp3",
     "file": "voices/45361.mp3",
     "transcript": "Приветик",
-    "tags": [
-      "greeting",
-      "casual"
-    ]
+    "source": "zvukipro.com"
   },
   {
-    "id": "45347",
+    "id": 45347,
     "filename": "45347.mp3",
     "file": "voices/45347.mp3",
     "transcript": "Доброго времени суток",
-    "tags": [
-      "greeting",
-      "casual"
-    ]
+    "source": "zvukipro.com"
   },
   {
-    "id": "45348",
+    "id": 45348,
     "filename": "45348.mp3",
     "file": "voices/45348.mp3",
     "transcript": "Доброе утро",
-    "tags": [
-      "greeting",
-      "casual"
-    ]
+    "source": "zvukipro.com"
   },
   {
-    "id": "45352",
+    "id": 45352,
     "filename": "45352.mp3",
     "file": "voices/45352.mp3",
     "transcript": "Ой, добрый вечер",
-    "tags": [
-      "greeting",
-      "casual"
-    ]
+    "source": "zvukipro.com"
   },
   {
-    "id": "45368",
+    "id": 45368,
     "filename": "45368.mp3",
     "file": "voices/45368.mp3",
     "transcript": "Че делаешь",
-    "tags": [
-      "casual"
-    ]
+    "source": "zvukipro.com"
   },
   {
-    "id": "45353",
+    "id": 45353,
     "filename": "45353.mp3",
     "file": "voices/45353.mp3",
     "transcript": "Как дела?",
-    "tags": [
-      "casual",
-      "greeting"
-    ]
+    "source": "zvukipro.com"
   },
   {
-    "id": "45354",
+    "id": 45354,
     "filename": "45354.mp3",
     "file": "voices/45354.mp3",
     "transcript": "Я книгу читаю, а ты?",
-    "tags": [
-      "busy",
-      "casual"
-    ]
+    "source": "zvukipro.com"
   },
   {
-    "id": "45369",
+    "id": 45369,
     "filename": "45369.mp3",
     "file": "voices/45369.mp3",
     "transcript": "Ногти крашу, а ты чем занят?",
-    "tags": [
-      "busy",
-      "casual"
-    ]
+    "source": "zvukipro.com"
   },
   {
-    "id": "45357",
+    "id": 45357,
     "filename": "45357.mp3",
     "file": "voices/45357.mp3",
     "transcript": "Не поняла",
-    "tags": [
-      "reaction",
-      "casual"
-    ]
+    "source": "zvukipro.com"
   },
   {
-    "id": "45356",
+    "id": 45356,
     "filename": "45356.mp3",
     "file": "voices/45356.mp3",
     "transcript": "Да (грустным голосом)",
-    "tags": [
-      "casual"
-    ]
+    "source": "zvukipro.com"
   },
   {
-    "id": "45387",
+    "id": 45387,
     "filename": "45387.mp3",
     "file": "voices/45387.mp3",
     "transcript": "Подожди",
-    "tags": [
-      "busy",
-      "casual"
-    ]
+    "source": "zvukipro.com"
   },
   {
-    "id": "45367",
+    "id": 45367,
     "filename": "45367.mp3",
     "file": "voices/45367.mp3",
     "transcript": "Блин, я так устала, целый день на ногах",
-    "tags": [
-      "busy",
-      "casual"
-    ]
+    "source": "zvukipro.com"
   },
   {
-    "id": "45381",
+    "id": 45381,
     "filename": "45381.mp3",
     "file": "voices/45381.mp3",
     "transcript": "Почему ты мне смайлики не шлешь?",
-    "tags": [
-      "flirt",
-      "casual"
-    ]
+    "source": "zvukipro.com"
   },
   {
-    "id": "45382",
+    "id": 45355,
+    "filename": "45355.mp3",
+    "file": "voices/45355.mp3",
+    "transcript": "Может пошалим?",
+    "source": "zvukipro.com"
+  },
+  {
+    "id": 45382,
     "filename": "45382.mp3",
     "file": "voices/45382.mp3",
     "transcript": "Почему, я тебе не нравлюсь?",
-    "tags": [
-      "flirt",
-      "casual"
-    ]
+    "source": "zvukipro.com"
   },
   {
-    "id": "45341",
+    "id": 45338,
+    "filename": "45338.mp3",
+    "file": "voices/45338.mp3",
+    "transcript": "В чем ты сейчас одет?",
+    "source": "zvukipro.com"
+  },
+  {
+    "id": 45341,
     "filename": "45341.mp3",
     "file": "voices/45341.mp3",
     "transcript": "Ясно",
-    "tags": [
-      "casual"
-    ]
+    "source": "zvukipro.com"
   },
   {
-    "id": "45350",
+    "id": 45371,
+    "filename": "45371.mp3",
+    "file": "voices/45371.mp3",
+    "transcript": "Хочешь меня?",
+    "source": "zvukipro.com"
+  },
+  {
+    "id": 45350,
     "filename": "45350.mp3",
     "file": "voices/45350.mp3",
     "transcript": "Ой расскажи, мне это интересно",
-    "tags": [
-      "reaction",
-      "casual"
-    ]
+    "source": "zvukipro.com"
   },
   {
-    "id": "45349",
+    "id": 45343,
+    "filename": "45343.mp3",
+    "file": "voices/45343.mp3",
+    "transcript": "М-м-м, какой большой, хочу тебя",
+    "source": "zvukipro.com"
+  },
+  {
+    "id": 45349,
     "filename": "45349.mp3",
     "file": "voices/45349.mp3",
     "transcript": "Для меня это что-то новое",
-    "tags": [
-      "reaction",
-      "casual"
-    ]
+    "source": "zvukipro.com"
   },
   {
-    "id": "45391",
+    "id": 45391,
     "filename": "45391.mp3",
     "file": "voices/45391.mp3",
     "transcript": "Может фоточку скинешь, я хочу его увидеть",
-    "tags": [
-      "casual"
-    ]
+    "source": "zvukipro.com"
   },
   {
-    "id": "45379",
+    "id": 45388,
+    "filename": "45388.mp3",
+    "file": "voices/45388.mp3",
+    "transcript": "Как думаешь, что сейчас на мне?",
+    "source": "zvukipro.com"
+  },
+  {
+    "id": 45379,
     "filename": "45379.mp3",
     "file": "voices/45379.mp3",
     "transcript": "Не угадал",
-    "tags": [
-      "reaction",
-      "casual"
-    ]
+    "source": "zvukipro.com"
   },
   {
-    "id": "45358",
+    "id": 45342,
+    "filename": "45342.mp3",
+    "file": "voices/45342.mp3",
+    "transcript": "Как тебе моя попа?",
+    "source": "zvukipro.com"
+  },
+  {
+    "id": 45339,
+    "filename": "45339.mp3",
+    "file": "voices/45339.mp3",
+    "transcript": "А грудь нравится?",
+    "source": "zvukipro.com"
+  },
+  {
+    "id": 45358,
     "filename": "45358.mp3",
     "file": "voices/45358.mp3",
     "transcript": "Очень жаль",
-    "tags": [
-      "casual"
-    ]
+    "source": "zvukipro.com"
   },
   {
-    "id": "45364",
+    "id": 45364,
     "filename": "45364.mp3",
     "file": "voices/45364.mp3",
     "transcript": "Обидно",
-    "tags": [
-      "casual"
-    ]
+    "source": "zvukipro.com"
   },
   {
-    "id": "45363",
+    "id": 45363,
     "filename": "45363.mp3",
     "file": "voices/45363.mp3",
     "transcript": "Та нет (грустно)",
-    "tags": [
-      "deny",
-      "casual"
-    ]
+    "source": "zvukipro.com"
   },
   {
-    "id": "45365",
+    "id": 45365,
     "filename": "45365.mp3",
     "file": "voices/45365.mp3",
     "transcript": "Я обиделась",
-    "tags": [
-      "casual"
-    ]
+    "source": "zvukipro.com"
   },
   {
-    "id": "45377",
+    "id": 45377,
     "filename": "45377.mp3",
     "file": "voices/45377.mp3",
     "transcript": "К сожалению не могу",
-    "tags": [
-      "deny",
-      "busy"
-    ]
+    "source": "zvukipro.com"
   },
   {
-    "id": "45390",
+    "id": 45390,
     "filename": "45390.mp3",
     "file": "voices/45390.mp3",
     "transcript": "Нет",
-    "tags": [
-      "deny"
-    ]
+    "source": "zvukipro.com"
   },
   {
-    "id": "45380",
+    "id": 45380,
     "filename": "45380.mp3",
     "file": "voices/45380.mp3",
     "transcript": "Ой всё",
-    "tags": [
-      "casual"
-    ]
+    "source": "zvukipro.com"
   },
   {
-    "id": "45351",
+    "id": 45351,
     "filename": "45351.mp3",
     "file": "voices/45351.mp3",
     "transcript": "Ну, прости, я сейчас немного занята, я позже напишу",
-    "tags": [
-      "busy"
-    ]
+    "source": "zvukipro.com"
   },
   {
-    "id": "45394",
+    "id": 45394,
     "filename": "45394.mp3",
     "file": "voices/45394.mp3",
     "transcript": "Прости, что долго не отвечала",
-    "tags": [
-      "busy",
-      "casual"
-    ]
+    "source": "zvukipro.com"
   },
   {
-    "id": "45337",
+    "id": 45337,
     "filename": "45337.mp3",
     "file": "voices/45337.mp3",
     "transcript": "А ты меня любишь?",
-    "tags": [
-      "flirt",
-      "casual"
-    ]
+    "source": "zvukipro.com"
   },
   {
-    "id": "45360",
+    "id": 45360,
     "filename": "45360.mp3",
     "file": "voices/45360.mp3",
     "transcript": "Сильно-сильно?",
-    "tags": [
-      "flirt",
-      "casual"
-    ]
+    "source": "zvukipro.com"
   },
   {
-    "id": "45340",
+    "id": 45340,
     "filename": "45340.mp3",
     "file": "voices/45340.mp3",
     "transcript": "Я тебе не доверяю",
-    "tags": [
-      "casual"
-    ]
+    "source": "zvukipro.com"
   },
   {
-    "id": "45372",
-    "filename": "45372.mp3",
-    "file": "voices/45372.mp3",
-    "transcript": "Хорошо (с грустным вздохом)",
-    "tags": [
-      "confirm",
-      "casual"
-    ]
-  },
-  {
-    "id": "45383",
-    "filename": "45383.mp3",
-    "file": "voices/45383.mp3",
-    "transcript": "Договорились",
-    "tags": [
-      "confirm"
-    ]
-  },
-  {
-    "id": "45393",
-    "filename": "45393.mp3",
-    "file": "voices/45393.mp3",
-    "transcript": "Хорошо",
-    "tags": [
-      "confirm",
-      "casual"
-    ]
-  },
-  {
-    "id": "45376",
-    "filename": "45376.mp3",
-    "file": "voices/45376.mp3",
-    "transcript": "Хорошо?",
-    "tags": [
-      "confirm",
-      "casual"
-    ]
-  },
-  {
-    "id": "45359",
-    "filename": "45359.mp3",
-    "file": "voices/45359.mp3",
-    "transcript": "Подскажи, какой сериал можно посмотреть интересненький",
-    "tags": [
-      "casual"
-    ]
-  },
-  {
-    "id": "45373",
-    "filename": "45373.mp3",
-    "file": "voices/45373.mp3",
-    "transcript": "Ой щас фильм смотрю",
-    "tags": [
-      "busy",
-      "casual"
-    ]
-  },
-  {
-    "id": "45386",
-    "filename": "45386.mp3",
-    "file": "voices/45386.mp3",
-    "transcript": "Можешь фильм посоветовать",
-    "tags": [
-      "casual"
-    ]
-  },
-  {
-    "id": "45375",
-    "filename": "45375.mp3",
-    "file": "voices/45375.mp3",
-    "transcript": "О скинь музыки",
-    "tags": [
-      "casual"
-    ]
-  },
-  {
-    "id": "45374",
-    "filename": "45374.mp3",
-    "file": "voices/45374.mp3",
-    "transcript": "Ну как скинешь, обязательно отпишись",
-    "tags": [
-      "casual"
-    ]
-  },
-  {
-    "id": "45378",
-    "filename": "45378.mp3",
-    "file": "voices/45378.mp3",
-    "transcript": "Буду ждать",
-    "tags": [
-      "casual"
-    ]
-  },
-  {
-    "id": "45389",
-    "filename": "45389.mp3",
-    "file": "voices/45389.mp3",
-    "transcript": "Давай буду ждать",
-    "tags": [
-      "casual"
-    ]
-  },
-  {
-    "id": "45384",
-    "filename": "45384.mp3",
-    "file": "voices/45384.mp3",
-    "transcript": "Голова болит",
-    "tags": [
-      "busy",
-      "casual"
-    ]
-  },
-  {
-    "id": "45345",
-    "filename": "45345.mp3",
-    "file": "voices/45345.mp3",
-    "transcript": "До завтра",
-    "tags": [
-      "bye"
-    ]
-  },
-  {
-    "id": "45344",
-    "filename": "45344.mp3",
-    "file": "voices/45344.mp3",
-    "transcript": "Пока-пока",
-    "tags": [
-      "bye",
-      "casual"
-    ]
-  },
-  {
-    "id": "45370",
-    "filename": "45370.mp3",
-    "file": "voices/45370.mp3",
-    "transcript": "Чмоки-чмоки",
-    "tags": [
-      "bye",
-      "flirt"
-    ]
-  },
-  {
-    "id": "45392",
-    "filename": "45392.mp3",
-    "file": "voices/45392.mp3",
-    "transcript": "Спокойной ночи",
-    "tags": [
-      "bye"
-    ]
-  },
-  {
-    "id": "45385",
-    "filename": "45385.mp3",
-    "file": "voices/45385.mp3",
-    "transcript": "Сладких снов",
-    "tags": [
-      "bye"
-    ]
-  },
-  {
-    "id": "45366",
+    "id": 45366,
     "filename": "45366.mp3",
     "file": "voices/45366.mp3",
     "transcript": "И я тебя люблю",
-    "tags": [
-      "flirt"
-    ]
+    "source": "zvukipro.com"
+  },
+  {
+    "id": 45372,
+    "filename": "45372.mp3",
+    "file": "voices/45372.mp3",
+    "transcript": "Хорошо (с грустным вздохом)",
+    "source": "zvukipro.com"
+  },
+  {
+    "id": 45359,
+    "filename": "45359.mp3",
+    "file": "voices/45359.mp3",
+    "transcript": "Подскажи, какой сериал можно посмотреть интересненький",
+    "source": "zvukipro.com"
+  },
+  {
+    "id": 45373,
+    "filename": "45373.mp3",
+    "file": "voices/45373.mp3",
+    "transcript": "Ой щас фильм смотрю",
+    "source": "zvukipro.com"
+  },
+  {
+    "id": 45362,
+    "filename": "45362.mp3",
+    "file": "voices/45362.mp3",
+    "transcript": "Можешь мне парнушку посоветовать интересную",
+    "source": "zvukipro.com"
+  },
+  {
+    "id": 45386,
+    "filename": "45386.mp3",
+    "file": "voices/45386.mp3",
+    "transcript": "Можешь фильм посоветовать",
+    "source": "zvukipro.com"
+  },
+  {
+    "id": 45375,
+    "filename": "45375.mp3",
+    "file": "voices/45375.mp3",
+    "transcript": "О скинь музыки",
+    "source": "zvukipro.com"
+  },
+  {
+    "id": 45374,
+    "filename": "45374.mp3",
+    "file": "voices/45374.mp3",
+    "transcript": "Ну как скинешь, обязательно отпишись",
+    "source": "zvukipro.com"
+  },
+  {
+    "id": 45376,
+    "filename": "45376.mp3",
+    "file": "voices/45376.mp3",
+    "transcript": "Хорошо?",
+    "source": "zvukipro.com"
+  },
+  {
+    "id": 45378,
+    "filename": "45378.mp3",
+    "file": "voices/45378.mp3",
+    "transcript": "Буду ждать",
+    "source": "zvukipro.com"
+  },
+  {
+    "id": 45389,
+    "filename": "45389.mp3",
+    "file": "voices/45389.mp3",
+    "transcript": "Давай буду ждать",
+    "source": "zvukipro.com"
+  },
+  {
+    "id": 45383,
+    "filename": "45383.mp3",
+    "file": "voices/45383.mp3",
+    "transcript": "Договорились",
+    "source": "zvukipro.com"
+  },
+  {
+    "id": 45393,
+    "filename": "45393.mp3",
+    "file": "voices/45393.mp3",
+    "transcript": "Хорошо",
+    "source": "zvukipro.com"
+  },
+  {
+    "id": 45384,
+    "filename": "45384.mp3",
+    "file": "voices/45384.mp3",
+    "transcript": "Голова болит",
+    "source": "zvukipro.com"
+  },
+  {
+    "id": 45345,
+    "filename": "45345.mp3",
+    "file": "voices/45345.mp3",
+    "transcript": "До завтра",
+    "source": "zvukipro.com"
+  },
+  {
+    "id": 45344,
+    "filename": "45344.mp3",
+    "file": "voices/45344.mp3",
+    "transcript": "Пока-пока",
+    "source": "zvukipro.com"
+  },
+  {
+    "id": 45346,
+    "filename": "45346.mp3",
+    "file": "voices/45346.mp3",
+    "transcript": "Пошлых снов",
+    "source": "zvukipro.com"
+  },
+  {
+    "id": 45370,
+    "filename": "45370.mp3",
+    "file": "voices/45370.mp3",
+    "transcript": "Чмоки-чмоки",
+    "source": "zvukipro.com"
+  },
+  {
+    "id": 45392,
+    "filename": "45392.mp3",
+    "file": "voices/45392.mp3",
+    "transcript": "Спокойной ночи",
+    "source": "zvukipro.com"
+  },
+  {
+    "id": 45385,
+    "filename": "45385.mp3",
+    "file": "voices/45385.mp3",
+    "transcript": "Сладких снов",
+    "source": "zvukipro.com"
   }
 ]

@@ -365,11 +365,13 @@ _DAY_RE = re.compile(
     r"|t.es\s+dispo\s+quand\s*\?|ça\s+te\s+va\s*\?|tu\s+es\s+libre\s*\?",
     re.I,
 )
-# Confirmation stricte : mot d'accord clair (pas juste "ouais" seul)
+# Confirmation stricte : accord explicite, pas un simple "ouais" en cours de conv
 _DAY_CONFIRMED_RE = re.compile(
-    r"ça\s+marche|c.est\s+bon|pas\s+de\s+prob|pourquoi\s+pas"
-    r"|avec\s+plaisir|volontiers|parfait|\bok\s+pour\b"
-    r"|\bouais\s+(?:c.est\s+bon|ça\s+marche|pourquoi\s+pas|ok|parfait)\b",
+    r"(?:ça|ca)\s+marche|c.est\s+(?:bon|parfait|nickel|top|cool)"
+    r"|pas\s+de\s+prob(?:lème)?|pourquoi\s+pas|d.accord|nickel|parfait"
+    r"|avec\s+plaisir|volontiers|\bok\s+(?:pour|nickel|parfait|top)?\b"
+    r"|\bouais\s+(?:c.est\s+bon|(?:ça|ca)\s+marche|pourquoi\s+pas|ok|parfait|nickel|top)\b"
+    r"|\b(?:yep|yes|super|top|nickel)\b",
     re.I,
 )
 _MP_OBJ_EXPENSIVE_RE = re.compile(
@@ -400,8 +402,10 @@ def _build_meet_injection(user_msg: str, hist: list, turn: int) -> tuple:
     asst_msgs = [m.get("content", "") for m in hist if m.get("role") == "assistant"]
     user_msgs = [m.get("content", "") for m in hist if m.get("role") == "user"]
 
-    link_sent    = any(_MP_LINK_RE.search(m)        for m in asst_msgs)
-    mp_discussed = any(_MP_DISCUSSED_RE.search(m)   for m in hist)
+    link_sent    = any(_MP_LINK_RE.search(m)       for m in asst_msgs)
+    # Fix critique : hist contient des dicts — itérer sur les strings extraites
+    all_msgs_text = asst_msgs + user_msgs
+    mp_discussed = any(_MP_DISCUSSED_RE.search(m) for m in all_msgs_text)
     obj_no       = any(_MP_OBJ_NO_RE.search(m)       for m in user_msgs[-3:])
     obj_expensive= any(_MP_OBJ_EXPENSIVE_RE.search(m) for m in user_msgs[-3:])
     obj_museum   = any(_MP_OBJ_MUSEUM_RE.search(m)   for m in user_msgs[-3:])
@@ -501,7 +505,8 @@ def _build_meet_injection(user_msg: str, hist: list, turn: int) -> tuple:
 
     # ── Ouverture tardive : conv longue sans rencontre évoquée ──
     if turn >= 8 and not mp_discussed:
-        no_meet_signal = not any(_MEET_SIGNAL_RE.search(m) for m in hist)
+        # Fix critique : hist contient des dicts — itérer sur les strings
+        no_meet_signal = not any(_MEET_SIGNAL_RE.search(m) for m in all_msgs_text)
         if no_meet_signal:
             return (
                 "[SYSTÈME CONVERSION] La conv dure depuis un moment. "
@@ -711,10 +716,17 @@ def _generate_response(phone: str, name: str, text: str, wa_history: list | None
         # Filtres durs post-génération
         reply = _apply_hard_filters(reply, lang)
 
-        # Fix 2 : normalise l'URL Picasso si présente, ajoute le lien UNIQUEMENT si demandé
+        # Normalise l'URL Picasso (variantes LLM + domaine nu sans https)
         if _MP_LINK_RE.search(reply):
             reply = re.sub(
                 r"https?://(?:www\.)?(?:museepicasso\.paris|musee-picasso-paris\.fr|the-museepicasso\.com)(?:/[^\s]*)?",
+                _MP_URL,
+                reply,
+                flags=re.I,
+            )
+            # Domaine nu sans https → ajoute le schéma
+            reply = re.sub(
+                r"(?<![/\w])(?:www\.)?the-museepicasso\.com(?:/[^\s]*)?",
                 _MP_URL,
                 reply,
                 flags=re.I,

@@ -503,6 +503,16 @@ def _build_meet_injection(user_msg: str, hist: list, turn: int) -> tuple:
                 True,
             )
 
+    # ── Rescue : Picasso mentionné mais lien jamais envoyé ──
+    # Cas : Claude a désobéi et a mentionné Picasso sans envoyer le lien
+    if mp_discussed and not link_sent and not user_mentioned_picasso:
+        return (
+            f"[SYSTÈME CONVERSION] Tu as mentionné le Musée Picasso mais tu n'as pas encore envoyé le lien. "
+            f"Glisse-le naturellement dans ce message : {_MP_URL}. "
+            f"Pas d'explication superflue.",
+            True,
+        )
+
     # ── Ouverture tardive : conv longue sans rencontre évoquée ──
     if turn >= 8 and not mp_discussed:
         # Fix critique : hist contient des dicts — itérer sur les strings

@@ -2376,17 +2376,17 @@ async def handle_outgoing(event):
                     else:
                         log("ERR", "Catalogue vocal désactivé (_CATALOG_ENABLED=False)")
                 else:
-                    unlock = mc.group(1) == "///"
-                    if unlock:
-                        _closer_lock.discard(target_id)
-                        _save_closer_lock()
-                        log("CLO", f"Verrou closer DÉSACTIVÉ — bot reprend", f"user={target_id} ({target_name})")
-                    else:
+                    activate = mc.group(1) == "///"
+                    if activate:
                         _closer_lock.add(target_id)
+                        _save_closer_lock()
+                        log("CLO", f"Bot ACTIVÉ pour cet utilisateur", f"user={target_id} ({target_name})")
+                    else:
+                        _closer_lock.discard(target_id)
                         _save_closer_lock()
                         _manual_pause.pop(target_id, None)
                         _save_manual_pause()
-                        log("CLO", f"Verrou closer ACTIVÉ — bot suspendu", f"user={target_id} ({target_name})")
+                        log("CLO", f"Bot DÉSACTIVÉ pour cet utilisateur", f"user={target_id} ({target_name})")
             else:
                 log("CLO", f"Utilisateur introuvable", f"nom={target_name}")
         return  # ne pas traiter les messages Saved Messages dans l'historique
@@ -2425,9 +2425,9 @@ async def handle_message(event):
     if user_id in BLOCKED_USERS:
         return
 
-    if user_id in _closer_lock:
+    if user_id not in _closer_lock:
         username_tmp = getattr(sender, "username", None) or f"id:{sender.id}"
-        log("CLO", f"Verrou closer actif — ignoré", f"user={username_tmp}")
+        log("CLO", f"Bot non activé pour cet utilisateur — ignoré", f"user={username_tmp}")
         return
 
     if _manual_pause_active(user_id):
@@ -3318,7 +3318,7 @@ async def recover_since_shutdown():
         # Re-vérifier BLOCKED_USERS ici au cas où il aurait été mis à jour
         if user_id in BLOCKED_USERS:
             continue
-        if user_id in _closer_lock:
+        if user_id not in _closer_lock:
             continue
 
         username = getattr(peer, "username", None) or f"id:{peer.id}"
@@ -4003,7 +4003,7 @@ async def _periodic_followup_check(bot_client: TelegramClient):
         for user_id, entry in list(data.items()):
             if user_id in BLOCKED_USERS:
                 continue
-            if user_id in _closer_lock:
+            if user_id not in _closer_lock:
                 continue
             hist = histories.get(user_id, [])
 

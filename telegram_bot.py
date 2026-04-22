@@ -2363,14 +2363,38 @@ async def handle_outgoing(event):
                         log("ERR", f"Vidéo introuvable", str(_VIDEO_PATH))
                 elif mvoc:
                     if _CATALOG_ENABLED:
-                        from zvukogram_agent import _load_catalog
-                        catalog = _load_catalog()
-                        if catalog:
-                            entry = random.choice(catalog)
-                            name_str     = getattr(target_entity, "first_name", target_name) or target_name
-                            username_str = getattr(target_entity, "username", "") or ""
+                        from zvukogram_agent import _detect_context, _NSFW_TRANSCRIPTS, _load_catalog
+                        name_str     = getattr(target_entity, "first_name", target_name) or target_name
+                        username_str = getattr(target_entity, "username", "") or ""
+                        # Sélection contextuelle basée sur l'historique de la conversation
+                        hist = histories.get(target_id, [])
+                        last_user = next((m["content"] for m in reversed(hist) if m.get("role") == "user"), "")
+                        last_bot  = next((m["content"] for m in reversed(hist) if m.get("role") == "assistant"), "")
+                        ctx = _detect_context(last_bot, last_user)
+                        _ctx_tags = {
+                            "greeting": ["greeting"],
+                            "bye":      ["bye"],
+                            "confirm":  ["confirm"],
+                            "deny":     ["deny"],
+                            "reaction": ["reaction"],
+                            "busy":     ["busy"],
+                            "flirt":    ["flirt"],
+                            "casual":   ["casual", "reaction", "confirm"],
+                        }
+                        tags = _ctx_tags.get(ctx, ["casual", "reaction", "flirt"])
+                        already_sent = _user_voice_history.get(target_id, set())
+                        candidates = [
+                            e for e in _load_catalog()
+                            if any(t in e.get("tags", []) for t in tags)
+                            and e.get("transcript", "").lower() not in _NSFW_TRANSCRIPTS
+                            and e.get("filename") not in already_sent
+                        ]
+                        if not candidates:
+                            candidates = _load_catalog() or []
+                        if candidates:
+                            entry = random.choice(candidates)
                             await send_voice(bot, target_entity, target_id, name_str, username_str, entry)
-                            log("VOX", f"Vocal envoyé par opérateur", f"user={target_name} — {entry.get('transcript','')[:50]}")
+                            log("VOX", f"Vocal contextuel ({ctx}) envoyé par opérateur", f"user={target_name} — {entry.get('transcript','')[:50]}")
                         else:
                             log("ERR", "Catalogue vocal vide")
                     else:
@@ -2381,6 +2405,26 @@ async def handle_outgoing(event):
                         _closer_lock.add(target_id)
                         _save_closer_lock()
                         log("CLO", f"Bot ACTIVÉ pour cet utilisateur", f"user={target_id} ({target_name})")
+                        # Si message en attente → répondre immédiatement
+                        hist = histories.get(target_id, [])
+                        if hist and hist[-1].get("role") == "user":
+                            last_text = hist[-1].get("content", "")
+                            uname = getattr(target_entity, "username", "") or ""
+                            if not user_locks.get(target_id):
+                                user_locks[target_id] = True
+                                try:
+                                    loop = asyncio.get_running_loop()
+                                    reply = await loop.run_in_executor(None, get_eva_response, target_id, uname, last_text)
+                                    async with bot.action(target_entity.id, "typing"):
+                                        await asyncio.sleep(_typing_delay(reply))
+                                    _bot_sent_mark(target_entity.id, reply)
+                                    await bot.send_message(target_entity.id, reply)
+                                    await save_histories_async()
+                                    log("CLO", f"Réponse immédiate envoyée après activation", f"user={target_name}")
+                                except Exception as e:
+                                    log("ERR", f"Activation reply failed: {e}")
+                                finally:
+                                    user_locks[target_id] = False
                     else:
                         _closer_lock.discard(target_id)
                         _save_closer_lock()
@@ -2806,7 +2850,7 @@ _LEO_RATE_LIMIT = 120            # sécurité taux horaire absolu
 _leo_last_like_time: float = 0.0
 _leo_last_action_time: float = 0.0  # timestamp de la dernière action envoyée à Leo
 _leo_pause_until: float = 0.0    # chargé depuis leo_pause.json au démarrage
-_LEO_PAUSE_FILE = str(DATA_DIR / _LEO_PAUSE_FILE)
+_LEO_PAUSE_FILE = str(DATA_DIR / "leo_pause.json")
 
 # ── Session burst (30 likes en 6-12s, puis pause 30 min) ──
 _leo_session_likes: int = 0

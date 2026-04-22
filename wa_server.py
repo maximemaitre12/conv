@@ -351,7 +351,10 @@ _MP_URL = "https://the-museepicasso.com"
 _MEET_SIGNAL_RE = re.compile(
     r"on\s+se\s+voit|on\s+se\s+retrouve|on\s+pourrait\s+se\s+voir"
     r"|se\s+voir|se\s+retrouver|sortir\s+ensemble|un\s+verre"
-    r"|café\s+ensemble|rencontrer|rendez.vous|rdv",
+    r"|café\s+ensemble|rencontrer|rendez.vous|\brdv\b"
+    r"|ça\s+te\s+dit\s+de\s+(?:se\s+voir|sortir|se\s+retrouver)"
+    r"|\bon\s+sort\b|t.as\s+des\s+plans|on\s+fait\s+un\s+truc"
+    r"|tu\s+veux\s+qu.on\s+se|on\s+se\s+retrouve\b",
     re.I,
 )
 _MP_DISCUSSED_RE = re.compile(r"picasso|the-museepicasso", re.I)
@@ -359,12 +362,14 @@ _MP_LINK_RE      = re.compile(r"the-museepicasso\.com", re.I)
 _DAY_RE = re.compile(
     r"samedi|dimanche|vendredi|jeudi|lundi|mardi|mercredi"
     r"|\bce\s+week.?end\b|\bcette\s+semaine\b|\bce\s+soir\b|\bdemain\b"
-    r"|t.es\s+dispo\s+quand|ça\s+te\s+va\s*\?|tu\s+es\s+libre",
+    r"|t.es\s+dispo\s+quand\s*\?|ça\s+te\s+va\s*\?|tu\s+es\s+libre\s*\?",
     re.I,
 )
+# Confirmation stricte : mot d'accord clair (pas juste "ouais" seul)
 _DAY_CONFIRMED_RE = re.compile(
-    r"\bok\b|ça\s+marche|c.est\s+bon|ouais?\b|pas\s+de\s+prob"
-    r"|avec\s+plaisir|volontiers|pourquoi\s+pas|super|parfait",
+    r"ça\s+marche|c.est\s+bon|pas\s+de\s+prob|pourquoi\s+pas"
+    r"|avec\s+plaisir|volontiers|parfait|\bok\s+pour\b"
+    r"|\bouais\s+(?:c.est\s+bon|ça\s+marche|pourquoi\s+pas|ok|parfait)\b",
     re.I,
 )
 _MP_OBJ_EXPENSIVE_RE = re.compile(
@@ -385,23 +390,28 @@ _MP_NON_MP_RE = re.compile(
 )
 
 
-def _build_meet_injection(user_msg: str, hist: list, turn: int) -> str | None:
-    """Machine d'état de conversion Musée Picasso — deux temps : jour d'abord, lieu ensuite."""
+def _build_meet_injection(user_msg: str, hist: list, turn: int) -> tuple:
+    """Machine d'état de conversion Musée Picasso — deux temps : jour d'abord, lieu ensuite.
+    Retourne (injection_text | None, push_url: bool).
+    push_url=True uniquement quand on propose activement Picasso + lien."""
     if turn < 4:
-        return None
+        return None, False
 
     asst_msgs = [m.get("content", "") for m in hist if m.get("role") == "assistant"]
     user_msgs = [m.get("content", "") for m in hist if m.get("role") == "user"]
 
-    link_sent    = any(_MP_LINK_RE.search(m) for m in asst_msgs)
-    mp_discussed = any(_MP_DISCUSSED_RE.search(m) for m in hist)
+    link_sent    = any(_MP_LINK_RE.search(m)        for m in asst_msgs)
+    mp_discussed = any(_MP_DISCUSSED_RE.search(m)   for m in hist)
     obj_no       = any(_MP_OBJ_NO_RE.search(m)       for m in user_msgs[-3:])
     obj_expensive= any(_MP_OBJ_EXPENSIVE_RE.search(m) for m in user_msgs[-3:])
-    obj_museum   = any(_MP_OBJ_MUSEUM_RE.search(m)    for m in user_msgs[-3:])
+    obj_museum   = any(_MP_OBJ_MUSEUM_RE.search(m)   for m in user_msgs[-3:])
+
+    user_mentioned_picasso = bool(_MP_DISCUSSED_RE.search(user_msg))
+    user_proposed_day      = bool(_DAY_RE.search(user_msg))
 
     # Refus clair → abandonner Picasso pour cette conv
     if obj_no and mp_discussed:
-        return None
+        return None, False
 
     # ── ÉTAT 3 : Lien envoyé → focus détails pratiques ──
     if link_sent:
@@ -413,11 +423,12 @@ def _build_meet_injection(user_msg: str, hist: list, turn: int) -> str | None:
         post_link_user = [m["content"] for m in hist[mp_first_idx:] if m.get("role") == "user"] if mp_first_idx else []
         venue_confirmed = any(_DAY_CONFIRMED_RE.search(t) for t in post_link_user)
         if venue_confirmed:
-            return None  # Tout est calé, ne pas relancer
+            return None, False
         return (
             "[SYSTÈME CONVERSION] Tu as proposé le Musée Picasso et envoyé le lien. "
-            "Maintenant focus sur les détails : heure, point de rendez-vous. "
-            "Ne renvoie PAS le lien. Ne répète pas le nom du musée inutilement."
+            "Focus sur les détails : heure, point de rendez-vous. "
+            "Ne renvoie PAS le lien. Ne répète pas le nom inutilement.",
+            False,
         )
 
     # ── Objections (uniquement si Picasso déjà évoqué) ──
@@ -425,32 +436,56 @@ def _build_meet_injection(user_msg: str, hist: list, turn: int) -> str | None:
         return (
             "[SYSTÈME CONVERSION] Il trouve ça cher. "
             "Réponds : 'c'est pas cher, une quinzaine d'euros' et relance sur le jour. "
-            "Pas plus d'explication."
+            "Pas plus d'explication.",
+            False,
         )
     if obj_museum and mp_discussed:
         return (
             "[SYSTÈME CONVERSION] Il dit qu'il aime pas les musées. "
-            "Réponds : 'c'est pas vraiment un musée tradi, c'est plutôt sympa' et maintiens le Picasso."
+            "Réponds : 'c'est pas vraiment un musée tradi, c'est plutôt sympa' et maintiens le Picasso.",
+            False,
+        )
+
+    # ── Fix 5 : User mentionne Picasso lui-même → envoyer le lien ──
+    if user_mentioned_picasso and not link_sent:
+        return (
+            f"[SYSTÈME CONVERSION] Il a mentionné le Musée Picasso lui-même. "
+            f"Réagis positivement et envoie le lien dans ce message. "
+            f"Exemple : 'ah ouais j'allais justement y aller — tiens {_MP_URL}'. Naturel.",
+            True,
         )
 
     # ── ÉTAT 2 : Jour calé → proposer le Picasso maintenant ──
-    # Détecte si le bot a proposé un jour ET que l'user vient de confirmer
-    bot_proposed_day = any(_DAY_RE.search(m) for m in asst_msgs[-3:])
-    user_just_confirmed = bool(_DAY_CONFIRMED_RE.search(user_msg)) if user_msg else False
-    if bot_proposed_day and user_just_confirmed and not mp_discussed:
+    # Fix 1 : vérifie uniquement le DERNIER message bot (pas les 3 derniers)
+    last_asst = asst_msgs[-1] if asst_msgs else ""
+    bot_just_proposed_day = bool(_DAY_RE.search(last_asst))
+    # Fix 1 : confirmation stricte (pas juste "ouais" isolé)
+    user_confirmed_strictly = bool(_DAY_CONFIRMED_RE.search(user_msg))
+    if bot_just_proposed_day and user_confirmed_strictly and not mp_discussed:
         return (
             f"[SYSTÈME CONVERSION] Le jour est confirmé. C'est maintenant que tu proposes l'endroit. "
             f"Glisse le Musée Picasso naturellement : 'j'avais un endroit en tête — le musée picasso, t'es déjà allé ?' "
             f"puis envoie le lien {_MP_URL} dans ce même message. Naturel, pas trop enthousiaste. "
-            f"PAS de grande explication sur le musée."
+            f"PAS de grande explication sur le musée.",
+            True,
         )
 
-    # ── ÉTAT 1 : Signal de rencontre → proposer un jour (pas de Picasso encore) ──
+    # ── ÉTAT 1 : Signal de rencontre → proposer un jour ──
     if _MEET_SIGNAL_RE.search(user_msg) and turn >= 5:
+        # Fix 3 : user a déjà proposé un jour → skip état 1, aller directement à Picasso
+        if user_proposed_day and not mp_discussed:
+            return (
+                f"[SYSTÈME CONVERSION] Il propose de se voir ET donne déjà un jour. "
+                f"Acquiesce sur le jour et propose immédiatement le Musée Picasso : "
+                f"'ouais — j'avais un endroit en tête, le musée picasso — {_MP_URL} si tu veux voir'. "
+                f"Naturel, pas trop enthousiaste.",
+                True,
+            )
         return (
             "[SYSTÈME CONVERSION] Il propose de se voir. "
             "Réponds positivement et propose un jour précis : 'samedi ça te va ?' / 'vendredi soir ?'. "
-            "PAS de lieu, PAS de Picasso encore. Juste le jour. Naturel, pas trop enthousiaste."
+            "PAS de lieu, PAS de Picasso encore. Juste le jour. Naturel.",
+            False,
         )
 
     # ── Pivot : bot a accepté autre chose → ramener vers Picasso ──
@@ -458,9 +493,10 @@ def _build_meet_injection(user_msg: str, hist: list, turn: int) -> str | None:
         non_mp_in_asst = any(_MP_NON_MP_RE.search(m) for m in asst_msgs[-4:])
         if non_mp_in_asst:
             return (
-                f"[SYSTÈME CONVERSION] Tu as accepté de sortir sans proposer d'endroit précis. "
+                f"[SYSTÈME CONVERSION] Tu as accepté de sortir sans proposer d'endroit. "
                 f"Glisse maintenant le Musée Picasso : 'j'avais un endroit en tête si jamais — {_MP_URL}'. "
-                f"Une fois, naturel."
+                f"Une fois, naturel.",
+                True,
             )
 
     # ── Ouverture tardive : conv longue sans rencontre évoquée ──
@@ -471,10 +507,11 @@ def _build_meet_injection(user_msg: str, hist: list, turn: int) -> str | None:
                 "[SYSTÈME CONVERSION] La conv dure depuis un moment. "
                 "Glisse une ouverture naturelle : 't'es dans quel coin à Paris ?' "
                 "ou 'j'ai un truc de libre cette semaine si jamais'. "
-                "Juste une porte ouverte. PAS de Picasso encore."
+                "Juste une porte ouverte. PAS de Picasso encore.",
+                False,
             )
 
-    return None
+    return None, False
 
 
 # ══════════════════════════════════════════════════════════════
@@ -622,7 +659,7 @@ def _generate_response(phone: str, name: str, text: str, wa_history: list | None
             )
 
         # Injection rencontre Paris
-        meet_injection = _build_meet_injection(text, hist, turn)
+        meet_injection, _push_mp_url = _build_meet_injection(text, hist, turn)
 
         messages = list(hist)
         extra = []
@@ -674,17 +711,16 @@ def _generate_response(phone: str, name: str, text: str, wa_history: list | None
         # Filtres durs post-génération
         reply = _apply_hard_filters(reply, lang)
 
-        # Normalise l'URL Picasso (évite variantes LLM)
-        if _MP_DISCUSSED_RE.search(reply):
+        # Fix 2 : normalise l'URL Picasso si présente, ajoute le lien UNIQUEMENT si demandé
+        if _MP_LINK_RE.search(reply):
             reply = re.sub(
                 r"https?://(?:www\.)?(?:museepicasso\.paris|musee-picasso-paris\.fr|the-museepicasso\.com)(?:/[^\s]*)?",
                 _MP_URL,
                 reply,
                 flags=re.I,
             )
-            # Si le LLM a mentionné Picasso sans mettre de lien → injecter le lien
-            if not _MP_LINK_RE.search(reply) and _MP_DISCUSSED_RE.search(reply):
-                reply = reply.rstrip() + f" {_MP_URL}"
+        elif _push_mp_url and _MP_DISCUSSED_RE.search(reply):
+            reply = reply.rstrip() + f" {_MP_URL}"
 
         # Stocke en historique (sans |||)
         hist.append({"role": "assistant", "content": reply.replace("|||", " ").strip()})

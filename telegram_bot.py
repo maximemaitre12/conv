@@ -2317,24 +2317,28 @@ async def handle_outgoing(event):
     if int(user_id) == LEO_BOT_ID:
         return
 
-    # ── Commandes closer depuis Saved Messages (conv à soi-même) ──
-    # //nom  → bot suspendu pour cet utilisateur
-    # ///nom → bot reprend pour cet utilisateur
+    # ── Commandes opérateur depuis Saved Messages (conv à soi-même) ──
+    # //vid nom  → envoie video note ronde (force, bypass limite 1x)
+    # //voc nom  → envoie vocal aléatoire du catalogue
+    # //nom      → bot suspendu pour cet utilisateur (closer lock)
+    # ///nom     → bot reprend pour cet utilisateur
     if MY_ID and chat.id == MY_ID:
-        m = re.match(r'^(///)(.+)$', text) or re.match(r'^(//)(.+)$', text)
-        if m:
+        mv  = re.match(r'^//vid\s+(.+)$', text, re.I)
+        mvoc = re.match(r'^//voc\s+(.+)$', text, re.I)
+        mc  = re.match(r'^(///)(.+)$', text) or re.match(r'^(//)(.+)$', text)
+        cmd = mv or mvoc or mc
+        if cmd:
             try:
                 await bot.delete_messages(chat.id, [event.message.id])
             except Exception:
                 pass
-            unlock = m.group(1) == "///"
-            target_name = m.group(2).strip().lstrip("@")
+            target_name = (cmd.group(1) if (mv or mvoc) else cmd.group(2)).strip().lstrip("@")
+            target_entity = None
             target_id = None
             try:
-                entity = await bot.get_entity(target_name)
-                target_id = str(entity.id)
+                target_entity = await bot.get_entity(target_name)
+                target_id = str(target_entity.id)
             except Exception:
-                # Fallback : cherche dans les dialogues par prénom/nom
                 async for dialog in bot.iter_dialogs():
                     peer = dialog.entity
                     full = " ".join(filter(None, [
@@ -2343,19 +2347,46 @@ async def handle_outgoing(event):
                         getattr(peer, "username", None),
                     ])).lower()
                     if target_name.lower() in full:
+                        target_entity = peer
                         target_id = str(peer.id)
                         break
-            if target_id:
-                if unlock:
-                    _closer_lock.discard(target_id)
-                    _save_closer_lock()
-                    log("CLO", f"Verrou closer DÉSACTIVÉ — bot reprend", f"user={target_id} ({target_name})")
+            if target_id and target_entity:
+                if mv:
+                    if _VIDEO_PATH.exists():
+                        await bot.send_file(target_entity, str(_VIDEO_PATH), video_note=True)
+                        _video_sent_users.add(target_id)
+                        if target_id in histories:
+                            histories[target_id].append({"role": "assistant", "content": "[отправила видео]"})
+                        await save_histories_async()
+                        log("VID", f"Video note envoyée par opérateur", f"user={target_name}")
+                    else:
+                        log("ERR", f"Vidéo introuvable", str(_VIDEO_PATH))
+                elif mvoc:
+                    if _CATALOG_ENABLED:
+                        from zvukogram_agent import _load_catalog
+                        catalog = _load_catalog()
+                        if catalog:
+                            entry = random.choice(catalog)
+                            name_str     = getattr(target_entity, "first_name", target_name) or target_name
+                            username_str = getattr(target_entity, "username", "") or ""
+                            await send_voice(bot, target_entity, target_id, name_str, username_str, entry)
+                            log("VOX", f"Vocal envoyé par opérateur", f"user={target_name} — {entry.get('transcript','')[:50]}")
+                        else:
+                            log("ERR", "Catalogue vocal vide")
+                    else:
+                        log("ERR", "Catalogue vocal désactivé (_CATALOG_ENABLED=False)")
                 else:
-                    _closer_lock.add(target_id)
-                    _save_closer_lock()
-                    _manual_pause.pop(target_id, None)
-                    _save_manual_pause()
-                    log("CLO", f"Verrou closer ACTIVÉ — bot suspendu", f"user={target_id} ({target_name})")
+                    unlock = mc.group(1) == "///"
+                    if unlock:
+                        _closer_lock.discard(target_id)
+                        _save_closer_lock()
+                        log("CLO", f"Verrou closer DÉSACTIVÉ — bot reprend", f"user={target_id} ({target_name})")
+                    else:
+                        _closer_lock.add(target_id)
+                        _save_closer_lock()
+                        _manual_pause.pop(target_id, None)
+                        _save_manual_pause()
+                        log("CLO", f"Verrou closer ACTIVÉ — bot suspendu", f"user={target_id} ({target_name})")
             else:
                 log("CLO", f"Utilisateur introuvable", f"nom={target_name}")
         return  # ne pas traiter les messages Saved Messages dans l'historique

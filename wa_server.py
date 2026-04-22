@@ -356,9 +356,15 @@ _MEET_SIGNAL_RE = re.compile(
 )
 _MP_DISCUSSED_RE = re.compile(r"picasso|the-museepicasso", re.I)
 _MP_LINK_RE      = re.compile(r"the-museepicasso\.com", re.I)
-_MP_DATE_AGREED_RE = re.compile(
-    r"\bok\s+pour\b|ça\s+marche|c.est\s+bon|ouais\s+pourquoi\s+pas"
-    r"|samedi|dimanche|vendredi|jeudi|lundi|mardi|mercredi",
+_DAY_RE = re.compile(
+    r"samedi|dimanche|vendredi|jeudi|lundi|mardi|mercredi"
+    r"|\bce\s+week.?end\b|\bcette\s+semaine\b|\bce\s+soir\b|\bdemain\b"
+    r"|t.es\s+dispo\s+quand|ça\s+te\s+va\s*\?|tu\s+es\s+libre",
+    re.I,
+)
+_DAY_CONFIRMED_RE = re.compile(
+    r"\bok\b|ça\s+marche|c.est\s+bon|ouais?\b|pas\s+de\s+prob"
+    r"|avec\s+plaisir|volontiers|pourquoi\s+pas|super|parfait",
     re.I,
 )
 _MP_OBJ_EXPENSIVE_RE = re.compile(
@@ -380,24 +386,24 @@ _MP_NON_MP_RE = re.compile(
 
 
 def _build_meet_injection(user_msg: str, hist: list, turn: int) -> str | None:
-    """Machine d'état de conversion Musée Picasso — équivalent London Eye pour Manon."""
+    """Machine d'état de conversion Musée Picasso — deux temps : jour d'abord, lieu ensuite."""
     if turn < 4:
         return None
 
-    asst_msgs  = [m.get("content", "") for m in hist if m.get("role") == "assistant"]
-    user_msgs  = [m.get("content", "") for m in hist if m.get("role") == "user"]
+    asst_msgs = [m.get("content", "") for m in hist if m.get("role") == "assistant"]
+    user_msgs = [m.get("content", "") for m in hist if m.get("role") == "user"]
 
-    link_sent      = any(_MP_LINK_RE.search(m) for m in asst_msgs)
-    mp_discussed   = any(_MP_DISCUSSED_RE.search(m) for m in hist)
-    obj_no         = any(_MP_OBJ_NO_RE.search(m)  for m in user_msgs[-3:])
-    obj_expensive  = any(_MP_OBJ_EXPENSIVE_RE.search(m) for m in user_msgs[-3:])
-    obj_museum     = any(_MP_OBJ_MUSEUM_RE.search(m)    for m in user_msgs[-3:])
+    link_sent    = any(_MP_LINK_RE.search(m) for m in asst_msgs)
+    mp_discussed = any(_MP_DISCUSSED_RE.search(m) for m in hist)
+    obj_no       = any(_MP_OBJ_NO_RE.search(m)       for m in user_msgs[-3:])
+    obj_expensive= any(_MP_OBJ_EXPENSIVE_RE.search(m) for m in user_msgs[-3:])
+    obj_museum   = any(_MP_OBJ_MUSEUM_RE.search(m)    for m in user_msgs[-3:])
 
     # Refus clair → abandonner Picasso pour cette conv
     if obj_no and mp_discussed:
         return None
 
-    # Lien envoyé → focus sur la date uniquement
+    # ── ÉTAT 3 : Lien envoyé → focus détails pratiques ──
     if link_sent:
         mp_first_idx = next(
             (i for i, m in enumerate(hist)
@@ -405,58 +411,67 @@ def _build_meet_injection(user_msg: str, hist: list, turn: int) -> str | None:
             None,
         )
         post_link_user = [m["content"] for m in hist[mp_first_idx:] if m.get("role") == "user"] if mp_first_idx else []
-        date_agreed = any(_MP_DATE_AGREED_RE.search(t) for t in post_link_user)
-        if date_agreed:
-            return None  # Date confirmée, ne pas relancer
+        venue_confirmed = any(_DAY_CONFIRMED_RE.search(t) for t in post_link_user)
+        if venue_confirmed:
+            return None  # Tout est calé, ne pas relancer
         return (
-            "[SYSTÈME CONVERSION] Tu as envoyé le lien Musée Picasso. "
-            "Maintenant pousse doucement sur le jour : 'tu serais dispo quand ?' / 'samedi ça te va ?'. "
-            "Ne renvoie PAS le lien. Juste la date."
+            "[SYSTÈME CONVERSION] Tu as proposé le Musée Picasso et envoyé le lien. "
+            "Maintenant focus sur les détails : heure, point de rendez-vous. "
+            "Ne renvoie PAS le lien. Ne répète pas le nom du musée inutilement."
         )
 
-    # Objection prix
+    # ── Objections (uniquement si Picasso déjà évoqué) ──
     if obj_expensive and mp_discussed:
         return (
-            "[SYSTÈME CONVERSION] Il trouve ça cher. Réponds : 'c.est pas cher, une quinzaine d.euros' "
-            "et relance sur le jour. Pas plus d'explication."
+            "[SYSTÈME CONVERSION] Il trouve ça cher. "
+            "Réponds : 'c'est pas cher, une quinzaine d'euros' et relance sur le jour. "
+            "Pas plus d'explication."
         )
-
-    # Objection musées en général
     if obj_museum and mp_discussed:
         return (
             "[SYSTÈME CONVERSION] Il dit qu'il aime pas les musées. "
-            "Réponds : 'c.est pas vraiment un musée tradi, c.est plutôt sympa comme endroit' "
-            "et maintiens le Picasso."
+            "Réponds : 'c'est pas vraiment un musée tradi, c'est plutôt sympa' et maintiens le Picasso."
         )
 
-    # Signal de rencontre → proposition Picasso + lien immédiat
+    # ── ÉTAT 2 : Jour calé → proposer le Picasso maintenant ──
+    # Détecte si le bot a proposé un jour ET que l'user vient de confirmer
+    bot_proposed_day = any(_DAY_RE.search(m) for m in asst_msgs[-3:])
+    user_just_confirmed = bool(_DAY_CONFIRMED_RE.search(user_msg)) if user_msg else False
+    if bot_proposed_day and user_just_confirmed and not mp_discussed:
+        return (
+            f"[SYSTÈME CONVERSION] Le jour est confirmé. C'est maintenant que tu proposes l'endroit. "
+            f"Glisse le Musée Picasso naturellement : 'j'avais un endroit en tête — le musée picasso, t'es déjà allé ?' "
+            f"puis envoie le lien {_MP_URL} dans ce même message. Naturel, pas trop enthousiaste. "
+            f"PAS de grande explication sur le musée."
+        )
+
+    # ── ÉTAT 1 : Signal de rencontre → proposer un jour (pas de Picasso encore) ──
     if _MEET_SIGNAL_RE.search(user_msg) and turn >= 5:
         return (
-            f"[SYSTÈME CONVERSION URGENT] Il propose de se voir — c'est le moment. "
-            f"Propose IMMÉDIATEMENT le Musée Picasso avec le lien. "
-            f"Exemple : 'j.avais le musée picasso en tête depuis un moment — samedi ça te va ? {_MP_URL}' "
-            f"Un jour précis + le lien. Naturel, pas trop enthousiaste."
+            "[SYSTÈME CONVERSION] Il propose de se voir. "
+            "Réponds positivement et propose un jour précis : 'samedi ça te va ?' / 'vendredi soir ?'. "
+            "PAS de lieu, PAS de Picasso encore. Juste le jour. Naturel, pas trop enthousiaste."
         )
 
-    # Il a accepté de se voir ailleurs → pivot vers Picasso
+    # ── Pivot : bot a accepté autre chose → ramener vers Picasso ──
     if not mp_discussed and turn >= 5:
-        recent_asst = asst_msgs[-4:]
-        non_mp_accepted = any(_MP_NON_MP_RE.search(m) for m in recent_asst)
-        if non_mp_accepted:
+        non_mp_in_asst = any(_MP_NON_MP_RE.search(m) for m in asst_msgs[-4:])
+        if non_mp_in_asst:
             return (
-                f"[SYSTÈME CONVERSION] Tu as accepté de sortir sans mentionner le Musée Picasso. "
-                f"Glisse-le naturellement maintenant : 'avant ça j.avais le musée picasso en tête — {_MP_URL} si tu veux voir' "
-                f"Une fois, naturel, et tu passes à la date."
+                f"[SYSTÈME CONVERSION] Tu as accepté de sortir sans proposer d'endroit précis. "
+                f"Glisse maintenant le Musée Picasso : 'j'avais un endroit en tête si jamais — {_MP_URL}'. "
+                f"Une fois, naturel."
             )
 
-    # Conv longue sans meet évoqué → ouvrir une porte
+    # ── Ouverture tardive : conv longue sans rencontre évoquée ──
     if turn >= 8 and not mp_discussed:
-        no_meet_yet = not any(_MEET_SIGNAL_RE.search(m) for m in hist)
-        if no_meet_yet:
+        no_meet_signal = not any(_MEET_SIGNAL_RE.search(m) for m in hist)
+        if no_meet_signal:
             return (
-                "[SYSTÈME CONVERSION] La conv dure. Glisse naturellement une ouverture : "
-                "'t.es dans quel coin à Paris ?' ou 'j.avais le musée picasso en tête si jamais'. "
-                "Juste une porte ouverte, pas trop direct."
+                "[SYSTÈME CONVERSION] La conv dure depuis un moment. "
+                "Glisse une ouverture naturelle : 't'es dans quel coin à Paris ?' "
+                "ou 'j'ai un truc de libre cette semaine si jamais'. "
+                "Juste une porte ouverte. PAS de Picasso encore."
             )
 
     return None
